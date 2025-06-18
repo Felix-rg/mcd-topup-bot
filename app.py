@@ -1,6 +1,6 @@
 # ===== FILE: app.py =====
-from fastapi import FastAPI, HTTPException, Request
-from fastapi import BackgroundTasks import os
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+import os
 from pydantic import BaseModel
 import sqlite3
 import uuid
@@ -56,6 +56,9 @@ def topup(req: TopUpRequest):
 
     if nominal not in PRICES[provider]:
         raise HTTPException(status_code=400, detail=f"Nominal tidak tersedia untuk {provider}. Pilihan: {', '.join(PRICES[provider].keys())}")
+    
+    def get_price(provider: str, nominal:str) -> int:
+        return PRICES.get(provider, {}).get(nominal);\
 
     order_id = str(uuid.uuid4())
     created_at = datetime.datetime.utcnow().isoformat()
@@ -81,7 +84,7 @@ def topup(req: TopUpRequest):
     )
 
 @app.post("/callback")
-def tripay_callback(req: Requests):
+async def tripay_callback(req: Requests):
     data = await req.json()
     event = data.get("event")
     if event != "payment_status":
