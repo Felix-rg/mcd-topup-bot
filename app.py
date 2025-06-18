@@ -1,5 +1,6 @@
 # ===== FILE: app.py =====
 from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks import os
 from pydantic import BaseModel
 import sqlite3
 import uuid
@@ -10,7 +11,7 @@ from tripay import create_invoice
 from config import PRICES, TRIPAY_CALLBACK_URL, INSTANCE_ID, TOKEN_ULTRAMSG  # fix import token
 
 app = FastAPI(title="Mc'D TopUp API")
-
+BASE_URL = os.getenv("BASE_URL","http://127.0.0.1:8000/topup")
 # ===== DATABASE SETUP =====
 conn = sqlite3.connect("db.sqlite3", check_same_thread=False)
 cursor = conn.cursor()
@@ -80,7 +81,8 @@ def topup(req: TopUpRequest):
     )
 
 @app.post("/callback")
-def tripay_callback(data: dict):
+def tripay_callback(req: Requests):
+    data = await req.json()
     event = data.get("event")
     if event != "payment_status":
         return {"status": "ignored"}
@@ -167,7 +169,7 @@ async def whatsapp_webhook(req: Request):
             "method": parsed["method"]
         }
         try:
-            res = requests.post("http://127.0.0.1:8000/topup", json=payload, timeout=5)
+            res = requests.post(f"{BASE_URL}/topup", json=payload, timeout=5)
             if res.ok:
                 invoice = res.json().get("invoice_url", "-")
                 reply = f"\u2705 Transaksi berhasil dibuat!\nSilakan bayar:\n{invoice}"
