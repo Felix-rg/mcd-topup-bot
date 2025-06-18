@@ -1,5 +1,5 @@
 # ===== FILE: app.py =====
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import sqlite3
 import uuid
@@ -128,6 +128,62 @@ def check_status(order_id: str):
         invoice_url=invoice_url
     )
 
-# ===== PRICE LOOKUP =====
-def get_price(provider: str, nominal: str) -> int:
-    return PRICES.get(provider, {}).get(nominal)
+# ===== WHATSAPP WEBHOOK (ULTRAMSG) =====
+def parse_message(text):
+    try:
+        parts = text.lower().strip().split()
+        if parts[0] != "topup":
+            return None
+        return {
+            "provider": parts[1],
+            "nominal": parts[2],
+            "phone": parts[4],
+            "method": parts[6].upper()
+        }
+    except:
+        return None
+
+@app.post("/webhook")
+async def whatsapp_webhook(req: Request):
+    data = await req.json()
+    if data.get("event_type") != "message_received":
+        return {"status": "ignored"}
+
+    msg_data = data.get("data", {})
+    if msg_data.get("fromMe") or msg_data.get("self"):
+        return {"status": "ignored"}
+
+    sender = msg_data.get("from")
+    message = msg_data.get("body")
+
+    reply = "Format salah. Gunakan: topup telkomsel 10k ke 0812xxx via qris"
+    parsed = parse_message(message)
+
+    if parsed:
+        payload = {
+            "phone": parsed["phone"],
+            "provider": parsed["provider"],
+            "nominal": parsed["nominal"],
+            "method": parsed["method"]
+        }
+        try:
+            res = requests.post("http://127.0.0.1:8000/topup", json=payload, timeout=5)
+            if res.ok:
+                invoice = res.json().get("invoice_url", "-")
+                reply = f"\u2705 Transaksi berhasil dibuat!\nSilakan bayar:\n{invoice}"
+            else:
+                detail = res.json().get("detail", "Tidak diketahui")
+                reply = f"\u274C Gagal topup: {detail}"
+        except:
+            reply = "\u274C Gagal koneksi ke server."
+
+    requests.post(
+        f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+        json={
+            "token": TOKEN_ULTRAMSG,
+            "to": sender.replace("@c.us", ""),
+            "body": reply
+        }
+    )
+
+    return {"status": "sent"}
