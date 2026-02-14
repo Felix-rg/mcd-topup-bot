@@ -1,23 +1,42 @@
 # ===== FILE: app.py =====
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import os
 from pydantic import BaseModel
 import sqlite3
 import uuid
 import datetime
 import requests
+import traceback
+import time
+
+from datetime import datetime
 
 from tripay import create_invoice
-from config import PRICES, TRIPAY_CALLBACK_URL, INSTANCE_ID, TOKEN_ULTRAMSG  # fix import token
+from config import PRICES, TRIPAY_CALLBACK_URL, INSTANCE_ID, TOKEN_ULTRAMSG, BASE_URL  # fix import token
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Mc'D TopUp API")
-BASE_URL = os.getenv("BASE_URL","http://127.0.0.1:8000/topup")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/receipts", StaticFiles(directory="receipts"), name="receipts")
+
 # ===== DATABASE SETUP =====
 conn = sqlite3.connect("db.sqlite3", check_same_thread=False)
 cursor = conn.cursor()
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS topup (
     id TEXT PRIMARY KEY,
+    sender TEXT,
     phone TEXT,
     provider TEXT,
     nominal TEXT,
@@ -43,7 +62,7 @@ class TopUpResponse(BaseModel):
 
 # ===== API ENDPOINTS =====
 @app.post("/topup", response_model=TopUpResponse)
-def topup(req: TopUpRequest):
+def topup(req: TopUpRequest, sender: str = None):
     provider = req.provider.lower()
     nominal = req.nominal.lower()
     ALLOWED_METHODS = {"QRIS", "OVO", "DANA", "ShopeePay"}
@@ -58,10 +77,10 @@ def topup(req: TopUpRequest):
         raise HTTPException(status_code=400, detail=f"Nominal tidak tersedia untuk {provider}. Pilihan: {', '.join(PRICES[provider].keys())}")
     
     def get_price(provider: str, nominal:str) -> int:
-        return PRICES.get(provider, {}).get(nominal);\
+        return PRICES.get(provider, {}).get(nominal)
 
     order_id = str(uuid.uuid4())
-    created_at = datetime.datetime.utcnow().isoformat()
+    created_at = datetime.utcnow().isoformat()
     amount = get_price(provider, nominal)
 
 
@@ -71,9 +90,9 @@ def topup(req: TopUpRequest):
 
     # Simpan ke database
     cursor.execute('''
-        INSERT INTO topup (id, phone, provider, nominal, status, invoice_url, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (order_id, req.phone, req.provider, req.nominal, "pending", invoice_url, created_at))
+        INSERT INTO topup (id, sender, phone, provider, nominal, status, invoice_url, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_id, sender, req.phone, req.provider, req.nominal, "pending", invoice_url, created_at))
     conn.commit()
 
     return TopUpResponse(
@@ -83,12 +102,44 @@ def topup(req: TopUpRequest):
         invoice_url=invoice_url
     )
 
+# GENERATE IMAGE STRUK
+def generate_receipt_image(order_id, order_data, filepath):
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new('RGB', (400, 350), color=(255, 255, 255))
+    d = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 14)  # pastikan font tersedia
+    except:
+        font = ImageFont.load_default()
+
+    lines = [
+        "Mc'D (Mbok Dinah TopUp)",
+        "=======================",
+        f"Order ID   : {order_data['id']}",
+        f"Provider   : {order_data['provider']}",
+        f"Nominal    : {order_data['nominal']}",
+        f"No. Tujuan : {order_data['phone']}",
+        f"Metode     : {order_data['method']}",
+        f"Status     : {order_data['status']}",
+        f"Waktu      : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}",
+        "=======================",
+        "Terima kasih telah menggunakan layanan kami!"
+    ]
+
+    y = 10
+    for line in lines:
+        d.text((10, y), line, fill=(0, 0, 0), font=font)
+        y += 25
+
+    img.save(filepath)
+
 @app.post("/callback")
-async def tripay_callback(req: Requests):
+async def tripay_callback(req: Request):
     data = await req.json()
-    event = data.get("event")
-    if event != "payment_status":
-        return {"status": "ignored"}
+
+# Jika kamu mau log
+    print("📩 CALLBACK DARI TRIPAY:", data)
 
     order_id = data.get("merchant_ref")
     status = data.get("status")
@@ -101,19 +152,86 @@ async def tripay_callback(req: Requests):
     conn.commit()
 
     # Ambil nomor HP dari DB untuk kirim notifikasi WA
-    if status.lower() == "paid":
-        result = cursor.execute("SELECT phone FROM topup WHERE id = ?", (order_id,)).fetchone()
-        if result:
-            phone = result[0]
-            res = requests.post(
-                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+
+    result = cursor.execute("SELECT sender FROM topup WHERE id = ?", (order_id,)).fetchone()
+    if result:
+        sender = result[0]
+        if status.lower() == "paid":
+            order_data = cursor.execute("SELECT id, sender, phone, provider, nominal, status, sender FROM topup WHERE id = ?", (order_id,)).fetchone()
+            if order_data:
+                order_dict = {
+                    "id": order_data[0],
+                    "sender": order_data[1],
+                     "phone": order_data[2],
+                    "provider": order_data[3],
+                    "nominal": order_data[4],
+                    "status": order_data[5],
+                    "method": data.get("payment_method") or "Tidak diketahui"
+                }
+                filename = f"receipt_{order_id}.png"
+                receipt_path = f"receipts/{filename}"
+                generate_receipt_image(order_id, order_dict, receipt_path)
+                time.sleep(1) # kasih waktu 1 detik supaya file siap
+
+
+                body = f"✅ Pembayaran untuk pesanan {order_id} berhasil.\nStruk akan dikirimkan dalam bentuk gambar."
+                res = requests.post(
+                    f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat", 
+                    json={
+                        "token": TOKEN_ULTRAMSG,
+                        "to": sender,
+                        "body": body
+                    }
+                )
+                print("📤 ULTRAMSG CALLBACK RES:", res.status_code, res.text)
+
+                    # Kirim gambar ke pengirim
+                image_url = f"https://67b1-103-180-59-146.ngrok-free.app/receipts/{filename}"
+                print("📁 STRUK DISIMPAN DI:", receipt_path)
+                print("🔗 URL:", image_url)
+                print("CEK FILE ADA : ", os.path.exists(receipt_path))
+
+                res_upload = requests.post(
+                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/image",
                 json={
                     "token": TOKEN_ULTRAMSG,
-                    "to": phone,
-                    "body": f"✅ Pembayaran berhasil untuk pesanan {order_id}. Pulsa akan segera diproses."
+                    "to": sender,
+                    "image": image_url,
+                    "caption": f"✅ Pembayaran untuk pesanan {order_id} berhasil!\nBerikut struk pembayaran Anda:"
                 }
             )
+            print("📤 STRUK TERKIRIM:", res_upload.status_code, res_upload.text)
+
+        elif status.lower() == "expired":
+            body = f"⚠️ Pesanan {order_id} telah *kadaluarsa* karena belum dibayar dalam batas waktu."
+            res = requests.post(
+                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+                json={"token": TOKEN_ULTRAMSG, "to": sender, "body": body}
+                )
             print("📤 ULTRAMSG CALLBACK RES:", res.status_code, res.text)
+        elif status.lower() == "failed":
+            body = f"❌ Pesanan {order_id} *gagal* diproses oleh sistem pembayaran."
+            res = requests.post(
+                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+                json={"token": TOKEN_ULTRAMSG, "to": sender, "body": body}
+                )
+            print("📤 ULTRAMSG CALLBACK RES:", res.status_code, res.text)
+        elif status.lower() == "refund":
+            body = f"💸 Dana untuk pesanan {order_id} telah *dikembalikan*. Silakan cek rekening/ewallet Anda."
+            res = requests.post(
+                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+                json={"token": TOKEN_ULTRAMSG, "to": sender, "body": body}
+                )
+            print("📤 ULTRAMSG CALLBACK RES:", res.status_code, res.text)
+        else:
+            body = f"ℹ️ Pembaruan status untuk pesanan {order_id}: {status}"
+            res = requests.post(
+                f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+                json={"token": TOKEN_ULTRAMSG, "to": sender, "body": body}
+                )
+            print("📤 ULTRAMSG CALLBACK RES:", res.status_code, res.text)
+        print("🧪 MENCARI NOMOR HP UNTUK ORDER:", order_id)
+        print("📞 HASIL:", result)
 
     return {"success": True}
 
@@ -163,7 +281,7 @@ async def whatsapp_webhook(req: Request):
 
     reply = "Format salah. Gunakan: topup telkomsel 10k ke 0812xxx via qris"
     parsed = parse_message(message)
-
+    
     if parsed:
         payload = {
             "phone": parsed["phone"],
@@ -172,15 +290,40 @@ async def whatsapp_webhook(req: Request):
             "method": parsed["method"]
         }
         try:
-            res = requests.post(f"{BASE_URL}/topup", json=payload, timeout=5)
-            if res.ok:
-                invoice = res.json().get("invoice_url", "-")
-                reply = f"\u2705 Transaksi berhasil dibuat!\nSilakan bayar:\n{invoice}"
-            else:
-                detail = res.json().get("detail", "Tidak diketahui")
-                reply = f"\u274C Gagal topup: {detail}"
-        except:
-            reply = "\u274C Gagal koneksi ke server."
+            # Panggil fungsi topup langsung
+            encoded = jsonable_encoder(TopUpRequest(**payload))
+            response_data = topup(TopUpRequest(**encoded), sender=sender.replace("@c.us", ""))  # panggil fungsi langsung
+            invoice = response_data.invoice_url
+
+            # Ambil data dari payload
+            order_id = response_data.id
+            created_at = datetime.utcnow().isoformat()
+
+            cursor.execute('''
+                UPDATE topup SET sender = ? WHERE id = ?
+            ''', (sender.replace("@c.us", ""), order_id))
+            conn.commit()
+
+            reply = f"✅ Transaksi berhasil dibuat!\nSilakan bayar:\n{invoice}"
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            reply = f"❌ Gagal proses topup: {str(e)}"
+
+
+        wa_response = requests.post(
+            f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
+        json={
+            "token": TOKEN_ULTRAMSG,
+            "to": sender.replace("@c.us", ""),
+            "body": reply
+            }
+        )
+        print("📤 ULTRAMSG RESPONSE:", wa_response.status_code, wa_response.text)
+
+        return JSONResponse(content={"status": "sent"})
+
 
     requests.post(
         f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat",
@@ -190,5 +333,14 @@ async def whatsapp_webhook(req: Request):
             "body": reply
         }
     )
+    
+
 
     return {"status": "sent"}
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"Request : {request.method} {request.url}")
+    response = await call_next(request)
+    print(f"RESPONSE: {response.status_code}")
+    return response

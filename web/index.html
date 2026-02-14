@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>McD Topup</title>
+</head>
+<body>
+
+  <h2>Topup Pulsa</h2>
+
+  <label>Nomor HP:</label><br>
+  <input type="text" id="phone"><br><br>
+
+  <label>Provider:</label><br>
+  <select id="provider">
+    <option value="telkomsel">Telkomsel</option>
+    <option value="xl">XL</option>
+  </select><br><br>
+
+  <label>Nominal:</label><br>
+  <select id="nominal">
+  <option value="5k">5K</option>
+  <option value="10k">10K</option>
+  <option value="20k">20K</option>
+</select>
+<br><br>
+
+  <button onclick="buatOrder()">Beli Sekarang</button>
+  <button onclick="bukaStatusLagi()">Lihat Status Transaksi</button>
+
+
+  <div id="popup" style="
+  display:none;
+  position:fixed;
+  top:20%;
+  left:50%;
+  transform:translate(-50%, -20%);
+  background:white;
+  padding:20px;
+  border:1px solid black;
+  z-index:999;
+">
+  <h3>Status Transaksi</h3>
+  <p id="popupStatus">Menunggu...</p>
+  <p id="popupLink"></p>
+  <button onclick="tutupPopup()">Tutup</button>
+</div>
+
+<script src="script.js">
+</script>
+
+
+</body>
+</html>
