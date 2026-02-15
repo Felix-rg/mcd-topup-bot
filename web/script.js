@@ -6,7 +6,7 @@ window.onload = function() {
     currentOrderId = last;
 
     // langsung ambil status terakhir
-    fetch("http://127.0.0.1:8000/topup/" + currentOrderId)
+    fetch("https://mcd-topup-bot-production.up.railway.app/topup/" + currentOrderId)
       .then(res => res.json())
       .then(data => {
         document.getElementById("popupStatus").innerText =
@@ -25,7 +25,7 @@ async function buatOrder() {
   const provider = document.getElementById("provider").value;
   const nominal = document.getElementById("nominal").value;
 
-  const response = await fetch("http://127.0.0.1:8000/topup", {
+  const response = await fetch("https://mcd-topup-bot-production.up.railway.app/topup", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -56,7 +56,7 @@ async function buatOrder() {
 async function cekStatus() {
   if (!currentOrderId) return;
 
-  const response = await fetch("http://127.0.0.1:8000/topup/" + currentOrderId);
+  const response = await fetch("https://mcd-topup-bot-production.up.railway.app/topup/" + currentOrderId);
   const data = await response.json();
 
   document.getElementById("popupStatus").innerText =
