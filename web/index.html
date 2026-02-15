@@ -24,6 +24,15 @@
 </select>
 <br><br>
 
+  <label>Metode Pembayaran:</label><br>
+<select id="method">
+  <option value="QRIS">QRIS</option>
+  <option value="DANA">DANA</option>
+  <option value="OVO">OVO</option>
+  <option value="ShopeePay">ShopeePay</option>
+  <option value="Indomaret">Indomaret</option>
+</select><br><br>
+
   <button onclick="buatOrder()">Beli Sekarang</button>
   <button onclick="bukaStatusLagi()">Lihat Status Transaksi</button>
 
@@ -72,8 +81,9 @@ async function buatOrder() {
   const phone = document.getElementById("phone").value;
   const provider = document.getElementById("provider").value;
   const nominal = document.getElementById("nominal").value;
+  const method = document.getElementById("method").value;
 
-  const response = await fetch("https://mcd-topup-bot-production.up.railway.app/topup", {
+  const response = await fetch("https://NAMA-PROJECT.up.railway.app/topup", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -82,21 +92,18 @@ async function buatOrder() {
       phone: phone,
       provider: provider,
       nominal: nominal,
-      method: "QRIS"
+      method: method
     })
   });
 
   const data = await response.json();
 
   currentOrderId = data.id;
-    localStorage.setItem("last_order_id", data.id);
 
-
-    
   document.getElementById("popup").style.display = "block";
   document.getElementById("popupStatus").innerText = "Status: pending";
   document.getElementById("popupLink").innerHTML =
-    "<a href='" + data.invoice_url + "' target='_blank'>Klik di sini untuk bayar</a>";
+    "<a href='" + data.invoice_url + "' target='_blank'>Klik untuk bayar</a>";
 
   cekStatus();
 }
