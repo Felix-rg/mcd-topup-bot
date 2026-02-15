@@ -17,9 +17,13 @@ from datetime import datetime
 from tripay import create_invoice
 from config import PRICES, TRIPAY_CALLBACK_URL, INSTANCE_ID, TOKEN_ULTRAMSG, BASE_URL  # fix import token
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="Mc'D TopUp API")
 
+@app.get("/")
+def home():
+    return FileResponse("web/index.html")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
