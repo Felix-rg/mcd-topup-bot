@@ -69,7 +69,7 @@ class TopUpResponse(BaseModel):
 def topup(req: TopUpRequest, sender: str = None):
     provider = req.provider.lower()
     nominal = req.nominal.lower()
-    ALLOWED_METHODS = {"QRIS", "OVO", "DANA", "ShopeePay"}
+    ALLOWED_METHODS = {"QRIS", "OVO", "DANA", "ShopeePay","Indomaret"}
 
     if req.method.upper() not in ALLOWED_METHODS:
         raise HTTPException(status_code=400, detail="Metode pembayaran tidak didukung.")
