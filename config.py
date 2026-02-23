@@ -12,13 +12,13 @@ DIGIFLAZZ_KEY = os.getenv("DIGIFLAZZ_KEY")
 TRIPAY_API_KEY = os.getenv("TRIPAY_API_KEY")
 TRIPAY_PRIVATE_KEY = os.getenv("TRIPAY_PRIVATE_KEY")
 TRIPAY_MERCHANT_CODE = "T41788"
-TRIPAY_CALLBACK_URL = "https://7ada-125-165-204-60.ngrok-free.app/callback"
+TRIPAY_CALLBACK_URL = "mcd-topup-bot-production.up.railwat.app/callback"
 TRIPAY_BASE_URL = "https://tripay.co.id/api-sandbox/transaction/create"
 
 INSTANCE_ID = os.getenv("INSTANCE_ID")
 TOKEN_ULTRAMSG = os.getenv("TOKEN_ULTRAMSG")  
 
-BASE_URL = "https://7ada-125-165-204-60.ngrok-free.app"
+BASE_URL = "mcd-topup-bot-production.up.railwat.app"
 
 PRICES = {
     "telkomsel": {"5k": 6500, "10k": 11000, "15k": 16000, "20k": 21000},
