@@ -579,6 +579,11 @@ def admin_success():
         for r in rows
     ]
 
+@app.get("/check-ip")
+def chek_ip():
+    import requests
+    return request.get("api.ipify.org?format=json").json()
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     print(f"Request : {request.method} {request.url}")
