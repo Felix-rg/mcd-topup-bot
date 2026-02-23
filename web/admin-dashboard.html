@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        body {
+            margin:0;
+            font-family: Arial, sans-serif;
+            background:#f4f6f8;
+        }
+
+        .layout {
+            display:flex;
+            min-height:100vh;
+        }
+
+        .sidebar {
+            width:220px;
+            background:#111;
+            color:white;
+            padding:20px;
+        }
+
+        .sidebar h2 {
+            margin-bottom:20px;
+        }
+
+        .sidebar button {
+            width:100%;
+            padding:12px;
+            margin-bottom:10px;
+            border:none;
+            background:#222;
+            color:white;
+            cursor:pointer;
+            text-align:left;
+            border-radius:6px;
+        }
+
+        .sidebar button:hover {
+            background:#333;
+        }
+
+        .content {
+            flex:1;
+            padding:20px;
+        }
+
+        .card {
+            background:white;
+            padding:20px;
+            border-radius:10px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .title {
+            font-size:20px;
+            margin-bottom:15px;
+        }
+
+        /* TAB */
+        .tabs {
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-bottom:15px;
+        }
+
+        .tab {
+            padding:10px 16px;
+            background:#eee;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:14px;
+        }
+
+        .tab.active {
+            background:#111;
+            color:white;
+        }
+
+        /* TABLE */
+        .table-wrapper {
+            overflow-x:auto;
+        }
+
+        table {
+            width:100%;
+            border-collapse:collapse;
+            min-width:500px;
+        }
+
+        th, td {
+            padding:12px;
+            border-bottom:1px solid #eee;
+            text-align:left;
+            font-size:14px;
+        }
+
+        th {
+            background:#fafafa;
+        }
+
+        .status-pending { color:#e67e22; font-weight:bold; }
+        .status-success { color:#27ae60; font-weight:bold; }
+        .status-failed { color:#e74c3c; font-weight:bold; }
+
+        /* MOBILE */
+        @media(max-width:768px){
+            .layout {
+                flex-direction:column;
+            }
+
+            .sidebar {
+                width:100%;
+                display:flex;
+                gap:10px;
+                overflow-x:auto;
+            }
+
+            .sidebar button {
+                min-width:140px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="layout">
+
+    <div class="sidebar">
+        <h2>Admin</h2>
+        <button onclick="loadDashboard()">Dashboard</button>
+        <button onclick="loadOrders()">Transaksi</button>
+    </div>
+
+    <div class="content">
+        <div class="card" id="content">
+
+            <div class="title">Dashboard</div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="loadOrders('all', this)">Semua</div>
+                <div class="tab" onclick="loadOrders('pending', this)">Pending</div>
+                <div class="tab" onclick="loadOrders('success', this)">Success</div>
+                <div class="tab" onclick="loadOrders('failed', this)">Failed</div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Provider</th>
+                            <th>Nominal</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="4">Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+function setActiveTab(el){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    el.classList.add("active");
+}
+
+function renderTransaksiLayout(){
+    document.getElementById("content").innerHTML = `
+        <div class="title">Transaksi</div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="filterOrders('all', this)">Semua</div>
+            <div class="tab" onclick="filterOrders('pending', this)">Pending</div>
+            <div class="tab" onclick="filterOrders('success', this)">Success</div>
+            <div class="tab" onclick="filterOrders('failed', this)">Failed</div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nomor</th>
+                        <th>Provider</th>
+                        <th>Nominal</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="4">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderTable(data){
+    const body = document.getElementById("tableBody");
+
+    if(!body) return;
+
+    if(data.length === 0){
+        body.innerHTML = `<tr><td colspan="4">Tidak ada transaksi</td></tr>`;
+        return;
+    }
+
+    let html = "";
+
+    data.forEach(o=>{
+        let statusClass = "status-pending";
+
+        if(o.status === "success") statusClass = "status-success";
+        if(o.status === "failed") statusClass = "status-failed";
+
+        html += `
+        <tr>
+            <td>${o.phone}</td>
+            <td>${o.provider}</td>
+            <td>${o.nominal}</td>
+            <td class="${statusClass}">${o.status}</td>
+        </tr>
+        `;
+    });
+
+    body.innerHTML = html;
+}
+
+async function filterOrders(type="all", el=null){
+
+    if(el) setActiveTab(el);
+
+    let endpoint = "/admin/api/orders";
+
+    if(type==="pending") endpoint = "/admin/api/pending";
+    if(type==="success") endpoint = "/admin/api/success";
+    if(type==="failed") endpoint = "/admin/api/failed";
+
+    const res = await fetch(endpoint);
+    const data = await res.json();
+
+    renderTable(data);
+}
+
+function loadOrders(){
+    renderTransaksiLayout();
+    filterOrders("all");
+}
+
+function loadDashboard(){
+    document.getElementById("content").innerHTML = `
+        <div class="title">Dashboard</div>
+        Sistem admin aktif.
+    `;
+}
+
+/* load awal */
+loadOrders();
+
+</script>
+
+</body>
+</html>

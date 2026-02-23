@@ -24,7 +24,17 @@
 </select>
 <br><br>
 
-  <button onclick="buatOrder()">Beli Sekarang</button>
+  <label>Metode Pembayaran:</label><br>
+  <select id="method">
+    <option value="QRIS">QRIS (Semua e-wallet & bank)</option>
+    <option value="DANA">DANA</option>
+    <option value="OVO">OVO</option>
+    <option value="ShopeePay">ShopeePay</option>
+  </select><br><br>
+
+
+  <button id="btnBeli" onclick="buatOrder()">Beli Sekarang</button>
+
   <button onclick="bukaStatusLagi()">Lihat Status Transaksi</button>
 
 
@@ -46,24 +56,43 @@
 </div>
 
 <script>
-let currentOrderId = null;
+  let currentOrderId = null;
+  let currentMethod = null;
 
-// saat halaman dibuka
+  // saat halaman dibuka
 window.onload = function() {
   const last = localStorage.getItem("last_order_id");
+  const lastMethod = localStorage.getItem("last_method");
 
   if (last) {
     currentOrderId = last;
+    currentMethod = lastMethod;
     document.getElementById("popup").style.display = "block";
     ambilStatus();
   }
 };
 
+  
+
+
 async function buatOrder() {
+  const btn = document.getElementById("btnBeli");
+  btn.disabled = true;
+  btn.innerText = "Memproses...";
+
   const phone = document.getElementById("phone").value;
   const provider = document.getElementById("provider").value;
   const nominal = document.getElementById("nominal").value;
+  const method = document.getElementById("method").value;
+  
+  if (!phone) {
+    alert("Nomor tujuan belum diisi");
+    btn.disabled = false;
+    btn.innerText = "Beli Sekarang";
+    return;
+  }
 
+  try {
   const response = await fetch("/topup", {
     method: "POST",
     headers: {
@@ -73,21 +102,31 @@ async function buatOrder() {
       phone: phone,
       provider: provider,
       nominal: nominal,
-      method: "QRIS"
+      method: method
     })
   });
 
   const data = await response.json();
-
+  
   currentOrderId = data.id;
+  currentMethod = method;
   localStorage.setItem("last_order_id", data.id);
+  localStorage.setItem("last_method", method);
 
   document.getElementById("popup").style.display = "block";
   document.getElementById("popupStatus").innerText = "Status: pending";
   document.getElementById("popupLink").innerHTML =
-    "<a href='" + data.invoice_url + "' target='_blank'>Klik di sini untuk bayar</a>";
+  "Metode: " + currentMethod + "<br><a href='" + data.invoice_url + "' target='_blank'>Klik untuk bayar</a>";
+
 
   ambilStatus();
+} catch (err) {
+    
+  alert("Terjadi kesalahan saat membuat transaksi.");
+
+}
+  btn.disabled = false;
+  btn.innerText = "Beli Sekarang";
 }
 
 async function ambilStatus() {
@@ -100,7 +139,7 @@ async function ambilStatus() {
     "Status: " + data.status;
 
   document.getElementById("popupLink").innerHTML =
-    "<a href='" + data.invoice_url + "' target='_blank'>Klik di sini untuk bayar</a>";
+    "Metode: " + currentMethod + "<br><a href='" + data.invoice_url + "' target='_blank'>Klik di sini untuk bayar</a>";
 
   if (data.status.toLowerCase() !== "paid") {
     setTimeout(ambilStatus, 5000);
