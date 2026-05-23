@@ -1,32 +1,19 @@
-# ===== FILE: app.py =====
-
-from fastapi import FastAPI, HTTPException, Header, Request, BackgroundTasks
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from tripay import create_invoice
-from config import PRICES, TRIPAY_CALLBACK_URL, INSTANCE_ID, TOKEN_ULTRAMSG, BASE_URL  # fix import token
 from fastapi.middleware.cors import CORSMiddleware
+import threading
+
+from routes import topup_routes
+from routes import admin_routes
+from engine import auto_engine_loop
 from fastapi.responses import FileResponse
-from config import DIGIFLAZZ_USERNAME, DIGIFLAZZ_KEY
-from datetime import datetime
-
-import hashlib
-import os
-import sqlite3
-import uuid
-import requests
-import traceback
-import time
-
 
 app = FastAPI(title="Mc'D TopUp API")
-
 
 @app.get("/")
 def home():
     return FileResponse("web/index.html")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,15 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/receipts", StaticFiles(directory="receipts"), name="receipts")
+app.include_router(topup_routes.router)
+app.include_router(admin_routes.router)
 
-# ===== DATABASE SETUP =====
-def get_db():
-    conn = sqlite3.connect("db.sqlite3", timeout=30)
-    conn.execute("PRAGMA journal_mode=WAL;")
-    cursor = conn.cursor()
-    return conn, cursor
+threading.Thread(target=auto_engine_loop, daemon=True).start()
 
+<<<<<<< HEAD
 conn, cursor = get_db()
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS topup (
@@ -590,3 +574,7 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     print(f"RESPONSE: {response.status_code}")
     return response
+=======
+app.mount("/web", StaticFiles(directory="web"), name="web")
+app.mount("/receipts", StaticFiles(directory="receipts"), name="receipts")
+>>>>>>> 86f7b85 (Engine 2.0)

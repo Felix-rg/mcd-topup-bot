@@ -1,167 +1,206 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>McD Topup</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>McD Digital - Topup Game Terpercaya</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/web/css/main.css?v=4">
 </head>
-<body>
+<body class="bg-light">
 
-  <h2>Topup Pulsa</h2>
+<nav class="navbar navbar-expand-lg navbar-dark topbar-custom sticky-top shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-4" href="#" onclick="showHome()"><i class="bi bi-controller text-warning"></i> McD Digital</a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-  <label>Nomor HP:</label><br>
-  <input type="text" id="phone"><br><br>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan" data-bs-dismiss="collapse">
+                        <i class="bi bi-search"></i> Cek Pesanan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-warning fw-bold" href="/admin">
+                        <i class="bi bi-person-badge"></i> Admin
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
-  <label>Provider:</label><br>
-  <select id="provider">
-    <option value="telkomsel">Telkomsel</option>
-    <option value="xl">XL</option>
-  </select><br><br>
-
-  <label>Nominal:</label><br>
-  <select id="nominal">
-  <option value="5k">5K</option>
-  <option value="10k">10K</option>
-  <option value="20k">20K</option>
-</select>
-<br><br>
-
-  <label>Metode Pembayaran:</label><br>
-  <select id="method">
-    <option value="QRIS">QRIS (Semua e-wallet & bank)</option>
-    <option value="DANA">DANA</option>
-    <option value="OVO">OVO</option>
-    <option value="ShopeePay">ShopeePay</option>
-  </select><br><br>
-
-
-  <button id="btnBeli" onclick="buatOrder()">Beli Sekarang</button>
-
-  <button onclick="bukaStatusLagi()">Lihat Status Transaksi</button>
-
-
-  <div id="popup" style="
-  display:none;
-  position:fixed;
-  top:20%;
-  left:50%;
-  transform:translate(-50%, -20%);
-  background:white;
-  padding:20px;
-  border:1px solid black;
-  z-index:999;
-">
-  <h3>Status Transaksi</h3>
-  <p id="popupStatus">Menunggu...</p>
-  <p id="popupLink"></p>
-  <button onclick="tutupPopup()">Tutup</button>
+<div id="home-view" class="container mt-4 mb-5">
+    <div class="banner-wrapper mb-4 rounded-4 overflow-hidden shadow-sm">
+        <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Promo Banner" class="img-fluid w-100" style="height: 250px; object-fit: cover;">
+    </div>
+    <h4 class="fw-bold mb-3"><i class="bi bi-fire text-danger"></i> Sedang Populer</h4>
+    <div class="row g-3" id="game-list"></div>
 </div>
 
-<script>
-  let currentOrderId = null;
-  let currentMethod = null;
-
-  // saat halaman dibuka
-window.onload = function() {
-  const last = localStorage.getItem("last_order_id");
-  const lastMethod = localStorage.getItem("last_method");
-
-  if (last) {
-    currentOrderId = last;
-    currentMethod = lastMethod;
-    document.getElementById("popup").style.display = "block";
-    ambilStatus();
-  }
-};
-
-  
-
-
-async function buatOrder() {
-  const btn = document.getElementById("btnBeli");
-  btn.disabled = true;
-  btn.innerText = "Memproses...";
-
-  const phone = document.getElementById("phone").value;
-  const provider = document.getElementById("provider").value;
-  const nominal = document.getElementById("nominal").value;
-  const method = document.getElementById("method").value;
-  
-  if (!phone) {
-    alert("Nomor tujuan belum diisi");
-    btn.disabled = false;
-    btn.innerText = "Beli Sekarang";
-    return;
-  }
-
-  try {
-  const response = await fetch("/topup", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      phone: phone,
-      provider: provider,
-      nominal: nominal,
-      method: method
-    })
-  });
-
-  const data = await response.json();
-  
-  currentOrderId = data.id;
-  currentMethod = method;
-  localStorage.setItem("last_order_id", data.id);
-  localStorage.setItem("last_method", method);
-
-  document.getElementById("popup").style.display = "block";
-  document.getElementById("popupStatus").innerText = "Status: pending";
-  document.getElementById("popupLink").innerHTML =
-  "Metode: " + currentMethod + "<br><a href='" + data.invoice_url + "' target='_blank'>Klik untuk bayar</a>";
-
-
-  ambilStatus();
-} catch (err) {
+<div id="order-view" class="container mt-4 mb-5" style="display: none;">
+    <button class="btn btn-outline-secondary mb-3 rounded-pill px-4" onclick="showHome()"><i class="bi bi-arrow-left"></i> Kembali ke Beranda</button>
     
-  alert("Terjadi kesalahan saat membuat transaksi.");
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-4 sticky-top" style="top: 80px;">
+                <img id="game-image" src="" class="rounded-3 mx-auto mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                <h4 id="game-title" class="fw-bold text-uppercase mb-1">Nama Game</h4>
+                <p class="text-muted small">Proses Otomatis 1 Detik.</p>
+            </div>
+        </div>
 
-}
-  btn.disabled = false;
-  btn.innerText = "Beli Sekarang";
-}
+        <div class="col-lg-8">
+            <div class="card step-card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">1</div> Masukkan Data Akun</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div id="dynamic-input-container" class="row g-2"></div>
+                    
+                    <div class="mt-3">
+                        <label class="small fw-bold text-muted">Nomor WhatsApp (Untuk Notifikasi)</label>
+                        <input type="number" id="wa_pembeli" class="form-control bg-light" placeholder="Contoh: 08123456789">
+                    </div>
+                    
+                    <div id="nickname-box" class="alert alert-success mt-3 py-2 border-0" style="display: none; background-color: #d1e7dd;">
+                        <i class="bi bi-person-check-fill me-2"></i> Nickname: <strong id="player-nickname" class="text-success fs-5">Mencari...</strong>
+                    </div>
+                </div>
+            </div>
 
-async function ambilStatus() {
-  if (!currentOrderId) return;
+            <div class="card step-card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">2</div> Pilih Nominal Topup</h5>
+                </div>
+                <div class="card-body px-4 pb-4"><div id="nominal-grid" class="row g-3"></div></div>
+            </div>
 
-  const response = await fetch("/topup/" + currentOrderId);
-  const data = await response.json();
+            <div class="card step-card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">3</div> Pilih Pembayaran</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div class="row g-3" id="payment-grid">
+                        <div class="col-md-6"><div class="payment-card active" onclick="selectPayment('QRIS', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" height="25"></div></div>
+                        <div class="col-md-6"><div class="payment-card" onclick="selectPayment('OVO', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/OVO_logo.svg" height="20"></div></div>
+                        <div class="col-md-6"><div class="payment-card" onclick="selectPayment('DANA', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" height="20"></div></div>
+                    </div>
+                    <input type="hidden" id="method" value="QRIS">
+                </div>
+            </div>
 
-  document.getElementById("popupStatus").innerText =
-    "Status: " + data.status;
+            <button onclick="validasiSebelumBeli()" class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg fs-5 mb-5">
+                LANJUTKAN PEMBAYARAN <i class="bi bi-chevron-right ms-2"></i>
+            </button>
+        </div>
+    </div>
+</div>
 
-  document.getElementById("popupLink").innerHTML =
-    "Metode: " + currentMethod + "<br><a href='" + data.invoice_url + "' target='_blank'>Klik di sini untuk bayar</a>";
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cart-check"></i> Konfirmasi Pesanan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4 text-center">Pastikan data akun dan pesanan Anda sudah benar.</p>
+                <div class="card bg-light border-0 p-3 mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Nama Game:</span><strong id="conf-game"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Target ID:</span><strong id="conf-id"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Nickname:</span><strong id="conf-nick" class="text-success"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Item Topup:</span><strong id="conf-item"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold fs-5">Total Bayar:</span><strong id="conf-price" class="text-primary fs-5"></strong>
+                    </div>
+                </div>
+                <button onclick="eksekusiBeli()" id="btnEksekusi" class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5">
+                    BAYAR SEKARANG
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-  if (data.status.toLowerCase() !== "paid") {
-    setTimeout(ambilStatus, 5000);
-  }
-}
+<div class="modal fade" id="statusModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body text-center p-4">
+                <div id="status-icon" class="mb-3"></div>
+                <h4 id="status-text" class="fw-bold">Menunggu Pembayaran</h4>
+                
+                <div id="qris-container" class="my-3 p-3 bg-white rounded-3 shadow-sm" style="display:none;">
+                    <p class="small text-muted mb-2">Scan kode QR di bawah ini:</p>
+                    <img id="qris-image" src="" class="img-fluid rounded" style="max-width: 250px;">
+                    <div class="mt-2 fw-bold text-primary" id="qris-timer"></div>
+                </div>
 
-function tutupPopup() {
-  document.getElementById("popup").style.display = "none";
-}
+                <p id="status-desc" class="text-muted small"></p>
+                <div id="status-action" class="mt-3"></div>
+                
+                <button class="btn btn-light mt-4 rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-function bukaStatusLagi() {
-  const last = localStorage.getItem("last_order_id");
-  if (!last) {
-    alert("Belum ada transaksi.");
-    return;
-  }
-  currentOrderId = last;
-  document.getElementById("popup").style.display = "block";
-  ambilStatus();
-}
-</script>
+<div class="modal fade" id="modalCekPesanan" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold"><i class="bi bi-search text-warning"></i> Lacak Pesanan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">Masukkan Nomor HP atau Order ID untuk mengecek status pesanan kamu.</p>
+                <div class="input-group mb-3">
+                    <input type="text" id="input_cek_pesanan" class="form-control" placeholder="Contoh: 08123456789 atau ID-XXX">
+                    <button class="btn btn-warning fw-bold" onclick="cekStatusPesanan()">Cari</button>
+                </div>
+                
+                <div id="hasil_cek_pesanan" class="d-none mt-3 p-3 rounded bg-secondary text-light">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Item Topup:</span><strong id="conf-item"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Harga Produk:</span><strong id="conf-base-price"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 border-bottom border-secondary pb-2">
+                        <span class="text-muted">Biaya Admin:</span><strong id="conf-fee" class="text-danger"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="fw-bold fs-5">Total Bayar:</span><strong id="conf-price" class="text-primary fs-5"></strong>
+                    </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="/web/js/topup.js?v=2"></script>
 </body>
 </html>
