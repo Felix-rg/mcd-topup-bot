@@ -1,85 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Login - McD Digital</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #f4f4f4;
-            display: flex;
-            height: 100vh;
-            justify-content: center;
-            align-items: center;
-        }
-        .login-box {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            width: 300px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background: black;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-    </style>
+
+<title>Admin Login - McD Digital</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<link rel="stylesheet" href="/web/css/admin.css">
+
 </head>
+
 <body>
 
-<div class="login-box">
-    <h3>Admin Login</h3>
+<div class="login-container">
 
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
+<div class="card p-4 shadow login-card">
 
-    <button onclick="login()">Login</button>
+<h4 class="text-center mb-3">Admin Login</h4>
 
-    <div id="msg" class="error"></div>
+<input type="text" id="username"
+class="form-control mb-2"
+placeholder="Username">
+
+<input type="password" id="password"
+class="form-control mb-3"
+placeholder="Password">
+
+<button onclick="login()" class="btn btn-dark w-100">
+Login
+</button>
+
+<div id="msg" class="text-danger mt-2 text-center"></div>
+
 </div>
 
-<script>
-async function login() {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+</div>
 
-    const res = await fetch("/admin/login", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username,
-            password: password
-        })
-    });
-
-    const data = await res.json();
-
-    if (res.status !== 200) {
-        document.getElementById("msg").innerText = "Login gagal";
-        return;
-    }
-
-    // simpan token ke browser
-    localStorage.setItem("admin_token", data.token);
-
-    // pindah ke dashboard admin
-    window.location.href = "/admin-dashboard";
-}
-</script>
+<script src="/web/js/admin.js"></script>
 
 </body>
 </html>
