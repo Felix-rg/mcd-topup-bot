@@ -1,6 +1,7 @@
-db.sqlite3
 __pycache__/
 *.pyc
 .env
 receipts/*
 !receipts/.gitkeep
+*.sqlite3
+backups/
