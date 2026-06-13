@@ -1,7 +1,9 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import threading
+from database import init_db
+
 
 from routes import topup_routes
 from routes import admin_routes
@@ -25,7 +27,13 @@ app.add_middleware(
 app.include_router(topup_routes.router)
 app.include_router(admin_routes.router)
 
-threading.Thread(target=auto_engine_loop, daemon=True).start()
+
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
+    # Menjalankan background task native di event loop FastAPI
+    asyncio.create_task(auto_engine_loop())
+    print("🚀 Engine Auto-Polling & Backup Database Berjalan (Async)!")
 
 app.mount("/web", StaticFiles(directory="web"), name="web")
 app.mount("/receipts", StaticFiles(directory="receipts"), name="receipts")

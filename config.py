@@ -9,6 +9,8 @@ ADMIN_SECRET = os.getenv("ADMIN_SECRET")
 # ===== DIGIFLAZZ =====
 DIGIFLAZZ_USERNAME = os.getenv("DIGIFLAZZ_USERNAME")
 DIGIFLAZZ_KEY = os.getenv("DIGIFLAZZ_KEY")
+# Tambahkan di bagian ===== DIGIFLAZZ ===== pada config.py
+DIGIFLAZZ_SECRET = os.getenv("DIGIFLAZZ_SECRET")
 
 # ===== TRIPAY =====
 TRIPAY_API_KEY = os.getenv("TRIPAY_API_KEY")
@@ -21,5 +23,6 @@ INSTANCE_ID = os.getenv("INSTANCE_ID")
 TOKEN_ULTRAMSG = os.getenv("TOKEN_ULTRAMSG")  
 
 BASE_URL = os.getenv("BASE_URL")  # URL publik untuk callback dan link QR
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 ENV = "DEV"   # ganti ke "PROD" kalau sudah live

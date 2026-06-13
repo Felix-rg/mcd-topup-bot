@@ -1,15 +1,11 @@
-import time
+import asyncio
 import logging
-import os
-import shutil
-from datetime import datetime, timedelta
-
 from database import db_query, db_execute
 from services.digiflazz_service import kirim_digiflazz, cek_status_digiflazz
 
-def polling_status_engine():
+async def polling_status_engine():
     # 1. KIRIM TRANSAKSI YANG BARU DIBAYAR (PROCESSING)
-    new_orders = db_query("""
+    new_orders = await db_query("""
         SELECT id, phone, nominal 
         FROM topup 
         WHERE topup_status='PROCESSING'
@@ -18,21 +14,35 @@ def polling_status_engine():
     for o in new_orders:
         order_id = o[0]
         phone = o[1]
-        sku = o[2] # Ambil SKU langsung dari database
+        sku = o[2] 
         
         try:
-            res = kirim_digiflazz(sku, phone, order_id)
+            res = await kirim_digiflazz(sku, phone, order_id)
+            
+            # --- TAMBAHKAN LINE INI UNTUK DEBUGGING ---
+            print(f"DEBUG RESPONS DIGIFLAZZ ({order_id}): {res}")
+            # ------------------------------------------
+            
             status = res.get("data", {}).get("status")
             
             if status in ["Pending", "Success"]:
-                db_execute("UPDATE topup SET topup_status='PENDING_PROVIDER' WHERE id=?", (order_id,))
+                await db_execute(
+                    "UPDATE topup SET topup_status='PENDING_PROVIDER' WHERE id=:id", 
+                    {"id": order_id}
+                )
+                print(f"🔄 Order {order_id} diteruskan ke Digiflazz")
             else:
-                db_execute("UPDATE topup SET topup_status='FAILED' WHERE id=?", (order_id,))
+                # Ini yang terpicu sekarang
+                await db_execute(
+                    "UPDATE topup SET topup_status='FAILED' WHERE id=:id", 
+                    {"id": order_id}
+                )
+                print(f"❌ Order {order_id} Gagal diteruskan ke Digiflazz")
         except Exception as e:
-            logging.error(f"Error kirim_digiflazz {order_id}: {e}")
+            logging.error(f"🚨 Error kirim_digiflazz {order_id}: {e}")
 
     # 2. CEK STATUS TRANSAKSI YANG SEDANG BERJALAN DI DIGIFLAZZ
-    pending_orders = db_query("""
+    pending_orders = await db_query("""
         SELECT id, phone, nominal 
         FROM topup 
         WHERE topup_status='PENDING_PROVIDER'
@@ -44,36 +54,32 @@ def polling_status_engine():
         sku = r[2]
         
         try:
-            status_df = cek_status_digiflazz(sku, phone, order_id)
+            status_df = await cek_status_digiflazz(sku, phone, order_id)
             data = status_df.get("data", {})
             status = data.get("status")
-            sn = data.get("sn", "000000")
+            sn = data.get("sn", "")
 
             if status == "Success":
-                db_execute("UPDATE topup SET topup_status='SUCCESS', sn=? WHERE id=?", (sn, order_id))
+                await db_execute(
+                    "UPDATE topup SET topup_status='SUCCESS', sn=:sn WHERE id=:id", 
+                    {"sn": sn, "id": order_id}
+                )
+                print(f"✅ Order {order_id} SUKSES! SN: {sn}")
             elif status == "Gagal":
-                db_execute("UPDATE topup SET topup_status='FAILED' WHERE id=?", (order_id,))
+                await db_execute(
+                    "UPDATE topup SET topup_status='FAILED' WHERE id=:id", 
+                    {"id": order_id}
+                )
+                print(f"❌ Order {order_id} GAGAL dari pusat!")
         except Exception as e:
-            logging.error(f"Error cek_status {order_id}: {e}")
+            logging.error(f"🚨 Error cek_status {order_id}: {e}")
 
-def backup_database():
-    try:
-        if not os.path.exists("backups"):
-            os.makedirs("backups")
-        # Waktu WIB (+7 Jam)
-        timestamp = (datetime.utcnow() + timedelta(hours=7)).strftime("%Y%m%d_%H%M%S")
-        backup_path = f"backups/db_{timestamp}.sqlite3"
-        shutil.copy("db.sqlite3", backup_path)
-    except Exception as e:
-        logging.error(f"Backup error {e}")
-
-def auto_engine_loop():
+async def auto_engine_loop():
     while True:
         try:
-            backup_database()
-            polling_status_engine()
+            await polling_status_engine()
         except Exception as e:
             logging.error(f"ENGINE ERROR {e}")
         
-        # Cek setiap 15 detik
-        time.sleep(15)
+        # Jeda 15 detik tanpa memblokir event loop utama
+        await asyncio.sleep(15)
