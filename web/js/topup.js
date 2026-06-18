@@ -136,22 +136,54 @@ let typingTimer;
 function cekNicknameOtomatis() {
     clearTimeout(typingTimer);
     const uid = document.getElementById("user_id")?.value;
-    
+    const zid = document.getElementById("zone_id")?.value || "";
+    // Ambil nama provider (game) yang sedang dipilih user
+    const gameCode = selectedProvider || "game"; 
+
     if (!uid || uid.length < 4) {
         document.getElementById("nickname-box").style.display = "none";
+        // Kosongkan dataset jika ID dihapus
+        const nickElement = document.getElementById("player-nickname");
+        if (nickElement) nickElement.dataset.name = "";
         return;
     }
 
     document.getElementById("nickname-box").style.display = "block";
-    document.getElementById("player-nickname").innerText = "Mencari data...";
+    document.getElementById("player-nickname").innerText = "Mencari data ke server...";
     document.getElementById("player-nickname").className = "text-secondary fs-5";
 
-    typingTimer = setTimeout(() => {
-        const fakeName = "Player_" + uid.substring(0, 5); 
-        document.getElementById("player-nickname").innerText = fakeName;
-        document.getElementById("player-nickname").className = "text-success fw-bold fs-5";
-        document.getElementById("player-nickname").dataset.name = fakeName;
-    }, 1000);
+    typingTimer = setTimeout(async () => {
+        try {
+            // Memanggil API Backend yang kita buat di topup_routes.py
+            const res = await fetch("/check-nickname", { 
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    game_code: gameCode, 
+                    user_id: uid, 
+                    zone_id: zid 
+                })
+            });
+            
+            const data = await res.json();
+
+            if (!res.ok) {
+                // Jika API membalas ID tidak ditemukan / error
+                document.getElementById("player-nickname").innerText = "ID Tidak Ditemukan";
+                document.getElementById("player-nickname").className = "text-danger fw-bold fs-5";
+                document.getElementById("player-nickname").dataset.name = ""; // Kosongkan dataset
+            } else {
+                // Jika Nickname berhasil ditemukan
+                document.getElementById("player-nickname").innerText = data.nickname;
+                document.getElementById("player-nickname").className = "text-success fw-bold fs-5";
+                document.getElementById("player-nickname").dataset.name = data.nickname; // Simpan untuk struk
+            }
+        } catch (err) {
+            document.getElementById("player-nickname").innerText = "Gagal menghubungi server";
+            document.getElementById("player-nickname").className = "text-danger fw-bold fs-5";
+            document.getElementById("player-nickname").dataset.name = "";
+        }
+    }, 1000); // Tunggu user selesai mengetik 1 detik sebelum hit API
 }
 
 function validasiSebelumBeli() {
@@ -161,7 +193,7 @@ function validasiSebelumBeli() {
         return;
     }
 
-    // 2. Ambil Data ID Game (Biar masuk ke struk)
+    // 2. Ambil Data ID Game
     const uid = document.getElementById("user_id")?.value;
     const zid = document.getElementById("zone_id")?.value;
     if (!uid) {
@@ -170,7 +202,16 @@ function validasiSebelumBeli() {
     }
     const accountId = zid ? `${uid} (${zid})` : uid;
 
-    // 3. Hitung Biaya Admin Tripay (Pakai variabel selectedPrice yang bener)
+    // 3. CEK APAKAH NICKNAME VALID SEBELUM MELANJUTKAN (PERBAIKAN KRUSIAL)
+    const nickElement = document.getElementById("player-nickname");
+    const nickname = (nickElement && nickElement.dataset.name) ? nickElement.dataset.name : "";
+    
+    if (!nickname) {
+        Swal.fire("ID Tidak Valid", "Pastikan User ID benar dan Nama Akun sudah muncul di layar sebelum melanjutkan pembayaran.", "error");
+        return; // Hentikan eksekusi, modal tidak akan muncul!
+    }
+
+    // 4. Hitung Biaya Admin Tripay
     let adminFee = 0;
     const basePrice = selectedPrice; 
     const method = document.getElementById("method").value;
@@ -185,15 +226,10 @@ function validasiSebelumBeli() {
 
     const totalPrice = basePrice + adminFee;
 
-    // 4. Isi Data ke Modal Konfirmasi
+    // 5. Isi Data ke Modal Konfirmasi
     document.getElementById("conf-game").innerText = selectedProvider;
     document.getElementById("conf-id").innerText = accountId;
-    
-    // Tarik Nickname dari alert ijo
-    const nickElement = document.getElementById("player-nickname");
-    const nickname = (nickElement && nickElement.dataset.name) ? nickElement.dataset.name : "-";
-    document.getElementById("conf-nick").innerText = nickname;
-
+    document.getElementById("conf-nick").innerText = nickname; // Nickname ditaruh di sini
     document.getElementById("conf-item").innerText = selectedItemName;
     document.getElementById("conf-method").innerText = method;
     
@@ -202,7 +238,7 @@ function validasiSebelumBeli() {
     document.getElementById("conf-fee").innerText = "+ Rp " + adminFee.toLocaleString('id-ID');
     document.getElementById("conf-price").innerText = "Rp " + totalPrice.toLocaleString('id-ID');
 
-    // 5. Tampilkan Modalnya ke layar
+    // 6. Tampilkan Modalnya ke layar
     var modal = new bootstrap.Modal(document.getElementById('confirmModal'));
     modal.show();
 }

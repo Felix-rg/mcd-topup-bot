@@ -5,9 +5,15 @@ import hmac
 from fastapi import APIRouter, HTTPException, Request, Header
 from fastapi.responses import RedirectResponse
 from database import db_query, db_execute
+from database import engine as db_engine
+from sqlalchemy import text
 from services.tripay_service import create_invoice
 from config import TRIPAY_PRIVATE_KEY, DIGIFLAZZ_SECRET
 from services.digiflazz_service import kirim_digiflazz
+from pydantic import BaseModel
+from fastapi import HTTPException
+from services.nickname_service import check_game_nickname
+
 import os
 
 router = APIRouter()
@@ -83,32 +89,62 @@ async def topup(data: dict):
         raise HTTPException(500, f"Error Tripay: {str(e)}")
 
 @router.get("/topup/{identifier}")
-async def check_status(identifier: str):
-    try:
-        row = await db_query("""
-            SELECT payment_status, topup_status, invoice_url, nominal 
-            FROM topup 
-            WHERE id=:identifier OR phone=:identifier 
-            ORDER BY created_at DESC LIMIT 1
-        """, {"identifier": identifier})
+async def cek_status_pesanan(identifier: str):
+    """
+    Mencari pesanan berdasarkan Order ID (id) atau Nomor HP (phone)
+    """
+    # Gunakan db_engine hasil alias, bukan engine
+    async with db_engine.connect() as conn:
+        # Gunakan fungsi text() dari SQLAlchemy dan parameter :identifier
+        query = text("""
+    SELECT id, 
+           topup_status AS status, 
+           invoice_url, 
+           target_id, 
+           nominal AS nominal_name,
+           phone,
+           payment_status,
+           sn,
+           note
+    FROM topup 
+    WHERE id = :identifier OR phone = :identifier
+    ORDER BY created_at DESC 
+    LIMIT 1
+""")
         
+        # Eksekusi query dengan parameter dictionary
+        result = await conn.execute(query, {"identifier": identifier})
+        row = result.fetchone()
+
         if not row:
-            raise HTTPException(404, "Transaksi tidak ditemukan")
-            
-        payment_status, topup_status, invoice_url, nominal = row[0]
-        
-        display_status = payment_status
-        if payment_status == "PAID" and topup_status == "SUCCESS":
-            display_status = "SUCCESS"
-        elif topup_status == "FAILED":
-            display_status = "FAILED"
-        elif payment_status == "PAID" and topup_status == "PROCESSING":
-            display_status = "PROCESSING"
-            
-        return {"status": display_status, "invoice_url": invoice_url or "", "qr_url": ""}
-    except Exception as e:
-        print(f"🚨 ERROR CHECK STATUS: {e}")
-        raise HTTPException(500, f"Error Server: {str(e)}")
+            raise HTTPException(status_code=404, detail="Pesanan tidak ditemukan. Pastikan Nomor HP atau Order ID benar.")
+
+        return {
+            "id": row[0],             # Akses by index (id)
+            "status": row[1],         # Akses by index (status)
+            "qr_url": row[2],         # Akses by index (qr_url)
+            "invoice_url": row[3],    # Akses by index (invoice_url)
+            "target_id": row[4],      # Akses by index (target_id)
+            "game": row[5],           # Akses by index (game)
+            "nominal_name": row[6]    # Akses by index (nominal_name)
+        }
+
+# Buat schema model untuk request checker
+class NicknameRequest(BaseModel):
+    game_code: str
+    user_id: str
+    zone_id: str = ""
+
+# Endpoint API baru
+@router.post("/check-nickname")
+async def api_check_nickname(req: NicknameRequest):
+    nickname = await check_game_nickname(req.game_code, req.user_id, req.zone_id)
+    
+    if not nickname:
+        # Mengembalikan error 400 jika ID tidak valid
+        raise HTTPException(status_code=400, detail="ID Game tidak ditemukan atau salah ketik.")
+    
+    return {"status": "success", "nickname": nickname}
 
 @router.get("/api/products")
 async def get_public_products():

@@ -1,206 +1,1417 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>McD Digital - Topup Game Terpercaya</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/web/css/main.css?v=4">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>McD Digital - Topup Game Terpercaya</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- Bootstrap untuk SweetAlert2 & Bootstrap JS (dipakai di backend topup.js) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --gold: #C19B32;
+    --gold-light: #EBC166;
+    --gold-dark: #9E6710;
+    --black: #000000;
+    --charcoal: #121212;
+    --section-alt: #1A1A1A;
+    --body-text: #D9D9D9;
+    --muted: #A0A0A0;
+    --success: #3CB371;
+    --warning: #F4B942;
+    --error: #D9534F;
+    --info: #4A90E2;
+    --border: rgba(193,155,50,0.2);
+    --border-hover: rgba(193,155,50,0.5);
+    --gradient: linear-gradient(135deg, #9E6710 0%, #C19B32 40%, #EBC166 70%, #C19B32 100%);
+    --card-bg: #181818;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--black);
+    color: var(--body-text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--charcoal); }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+  /* ===== PAGES ===== */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== NAVBAR ===== */
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+    transition: all 0.3s;
+  }
+  .navbar.scrolled { background: rgba(0,0,0,0.98); box-shadow: 0 2px 20px rgba(193,155,50,0.1); }
+
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; cursor: pointer;
+  }
+  .nav-logo .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--gradient);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; flex-shrink: 0;
+  }
+  .nav-logo .logo-icon::before {
+    content: '◆'; color: var(--black); font-size: 14px; font-weight: 900;
+  }
+  .nav-logo span {
+    font-size: 22px; font-weight: 800;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+  }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 32px; list-style: none;
+  }
+  .nav-links a {
+    color: var(--body-text); text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    transition: color 0.2s; position: relative; cursor: pointer;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--gold-light); }
+  .nav-links a.active::after {
+    content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+    height: 2px; background: var(--gradient); border-radius: 1px;
+  }
+
+  .nav-actions { display: flex; align-items: center; gap: 12px; }
+
+  .btn-outline-gold {
+    padding: 8px 20px; border: 1.5px solid var(--gold);
+    background: transparent; color: var(--gold-light);
+    border-radius: 6px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: 'Poppins', sans-serif;
+  }
+  .btn-outline-gold:hover { background: rgba(193,155,50,0.1); }
+
+  .btn-gold {
+    padding: 8px 20px;
+    background: var(--gradient);
+    color: var(--black); border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+  }
+  .btn-gold:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(193,155,50,0.3); }
+
+  /* Nav link cek pesanan */
+  .nav-cek-pesanan {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--body-text); font-size: 13px; cursor: pointer;
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 6px; transition: all 0.2s;
+    text-decoration: none;
+  }
+  .nav-cek-pesanan:hover { border-color: var(--gold); color: var(--gold-light); }
+
+  /* Link admin */
+  .nav-admin {
+    padding: 6px 14px; border: 1.5px solid var(--gold);
+    background: rgba(193,155,50,0.08); color: var(--gold-light);
+    border-radius: 6px; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .nav-admin:hover { background: rgba(193,155,50,0.2); color: var(--gold-light); }
+
+  .nav-hamburger {
+    display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px;
+    background: none; border: none;
+  }
+  .nav-hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--gold-light); border-radius: 2px; transition: all 0.3s;
+  }
+
+  /* ===== HERO SECTION ===== */
+  .hero {
+    min-height: 100vh;
+    background: var(--black);
+    position: relative; display: flex; align-items: center;
+    overflow: hidden; padding-top: 64px;
+  }
+
+  .hero-stars { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .star {
+    position: absolute; background: var(--gold); border-radius: 50%;
+    animation: twinkle var(--dur, 3s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }
+  @keyframes twinkle { 0%,100%{opacity:0;transform:scale(0.5)} 50%{opacity:1;transform:scale(1)} }
+
+  .hero-content {
+    position: relative; z-index: 3;
+    padding: 0 5%; max-width: 580px;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(193,155,50,0.1);
+    border: 1px solid var(--border-hover);
+    border-radius: 4px; padding: 6px 14px;
+    font-size: 11px; font-weight: 600;
+    color: var(--gold-light);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .hero-badge::before { content: '⚡'; font-size: 12px; }
+
+  .hero-title {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800; line-height: 1.1;
+    color: #FFFFFF; margin-bottom: 8px;
+  }
+  .hero-title-accent {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800; line-height: 1.1;
+    display: block; margin-bottom: 20px;
+  }
+
+  .hero-desc {
+    color: var(--muted); font-size: 15px; line-height: 1.7;
+    margin-bottom: 36px; max-width: 440px;
+  }
+
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .btn-hero-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px;
+    background: var(--gradient);
+    color: var(--black); font-weight: 700; font-size: 15px;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: all 0.25s; font-family: 'Poppins', sans-serif;
+    text-decoration: none;
+  }
+  .btn-hero-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(193,155,50,0.35); }
+
+  .btn-hero-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; background: transparent;
+    color: var(--body-text); font-weight: 600; font-size: 15px;
+    border: 1.5px solid rgba(235,193,102,0.4); border-radius: 8px; cursor: pointer;
+    transition: all 0.25s; font-family: 'Poppins', sans-serif;
+    text-decoration: none;
+  }
+  .btn-hero-secondary:hover { border-color: var(--gold); color: var(--gold-light); }
+
+  /* Hero decoration art */
+  .hero-game-art {
+    position: absolute; right: 3%; top: 50%; transform: translateY(-52%);
+    width: 480px; z-index: 2;
+    filter: drop-shadow(0 0 40px rgba(193,155,50,0.2));
+  }
+
+  /* ===== FEATURES STRIP ===== */
+  .features-strip { padding: 0 5% 60px; }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .feature-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 16px;
+    display: flex; align-items: center; gap: 14px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .feature-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(193,155,50,0.1); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold-light); font-size: 18px; flex-shrink: 0;
+  }
+  .feature-text h4 { font-size: 13px; font-weight: 600; color: #FFF; margin-bottom: 2px; }
+  .feature-text p { font-size: 11px; color: var(--muted); }
+
+  /* ===== SECTION COMMONS ===== */
+  .section { padding: 60px 5%; }
+  .section-alt { background: var(--section-alt); }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;
+  }
+  .section-title { font-size: 22px; font-weight: 700; color: #FFF; }
+  .section-link {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--gold-light); font-size: 13px; font-weight: 600;
+    text-decoration: none; cursor: pointer; transition: gap 0.2s;
+  }
+  .section-link:hover { gap: 10px; }
+
+  /* ===== GAME CARDS (HOME) ===== */
+  .games-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;
+  }
+  /* Override: game-list menggunakan JS renderGameList() yang inject HTML dengan col-6 col-md-4 col-lg-3
+     Kita bungkus dengan row bootstrap agar tetap kompatibel */
+  #game-list { display: flex; flex-wrap: wrap; gap: 14px; }
+  #game-list > div { flex: 0 0 calc(16.666% - 12px); }
+
+  .game-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    text-align: center; cursor: pointer; transition: all 0.25s;
+    position: relative;
+  }
+  .game-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: var(--gradient); opacity: 0; transition: opacity 0.25s;
+  }
+  .game-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 8px 25px rgba(193,155,50,0.2); }
+  .game-card:hover::before { opacity: 0.05; }
+  .game-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .game-title {
+    padding: 12px 8px; font-weight: 700; font-size: 0.85rem;
+    text-transform: uppercase; color: #FFF; position: relative; z-index: 1;
+  }
+
+  /* ===== HOW TO TOP UP ===== */
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; position: relative;
+  }
+  .step-card-info {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 24px;
+    text-align: center; position: relative; z-index: 1;
+    transition: border-color 0.2s; margin: 8px; cursor: pointer;
+  }
+  .step-card-info:hover { border-color: var(--gold); }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--gradient); color: var(--black); font-size: 14px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+  }
+  .step-icon { font-size: 32px; color: var(--gold-light); margin-bottom: 14px; display: block; }
+  .step-title-info { font-size: 15px; font-weight: 700; color: #FFF; margin-bottom: 8px; }
+  .step-desc-info { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* ===== PAYMENT METHODS (HOME) ===== */
+  .payment-grid-home {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .payment-group {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .payment-group-title {
+    font-size: 11px; font-weight: 600; color: var(--gold-light);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .payment-logos { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .payment-logo {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 12px; font-weight: 700; color: #FFF;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .payment-logo.dana { color: #108EE9; }
+  .payment-logo.ovo { color: #4C3494; }
+  .payment-logo.gopay { color: #00AED6; }
+  .payment-logo.shopeepay { color: #EE4D2D; }
+  .payment-logo.bca { color: #0066AE; }
+  .payment-logo.bri { color: #0B5491; }
+  .payment-logo.bni { color: #F58220; }
+  .payment-logo.mandiri { color: #003087; }
+
+  /* ===== PROMO BANNER ===== */
+  .promo-banner {
+    margin: 0 5% 60px;
+    background: linear-gradient(135deg, #1a1200 0%, #0d0d0d 40%, #1a0d00 100%);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 44px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .promo-banner::before {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 50%;
+    background: linear-gradient(90deg, transparent, rgba(193,155,50,0.03));
+  }
+  .promo-content { position: relative; z-index: 2; }
+  .promo-title {
+    font-size: clamp(24px, 3vw, 36px); font-weight: 800;
+    background: var(--gradient); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 8px; line-height: 1.2;
+  }
+  .promo-desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .promo-art {
+    position: relative; z-index: 2; font-size: 100px;
+    filter: drop-shadow(0 0 30px rgba(193,155,50,0.4)); line-height: 1;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    background: #090909; border-top: 1px solid var(--border);
+    padding: 50px 5% 30px;
+  }
+  .footer-grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px; margin-bottom: 40px;
+  }
+  .footer-logo {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .footer-logo .logo-icon {
+    width: 32px; height: 32px; background: var(--gradient);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .footer-logo .logo-icon::before { content: '◆'; color: var(--black); font-size: 12px; font-weight: 900; }
+  .footer-logo span {
+    font-size: 20px; font-weight: 800;
+    background: var(--gradient); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .footer-tagline { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .footer-socials { display: flex; gap: 10px; }
+  .social-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px; transition: all 0.2s;
+    cursor: pointer; text-decoration: none;
+  }
+  .social-btn:hover { border-color: var(--gold); color: var(--gold-light); background: rgba(193,155,50,0.1); }
+
+  .footer-col h5 {
+    font-size: 13px; font-weight: 700; color: var(--gold-light);
+    margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.2s; cursor: pointer; }
+  .footer-links a:hover { color: var(--gold-light); }
+
+  .footer-payment-logos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .fp-logo {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 11px; font-weight: 600; color: #BBB;
+  }
+  .footer-bottom {
+    border-top: 1px solid var(--border); padding-top: 24px;
+    text-align: center; color: var(--muted); font-size: 12px;
+  }
+
+  /* ===== BREADCRUMB (ORDER VIEW) ===== */
+  .breadcrumb-bar {
+    padding: 10px 5%; background: var(--charcoal); border-bottom: 1px solid var(--border);
+  }
+  .breadcrumb-custom {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted); list-style: none; margin: 0; padding: 0;
+  }
+  .breadcrumb-custom a { color: var(--muted); text-decoration: none; cursor: pointer; }
+  .breadcrumb-custom a:hover { color: var(--gold-light); }
+  .breadcrumb-custom .sep { color: rgba(255,255,255,0.2); }
+  .breadcrumb-custom .current { color: var(--gold-light); }
+
+  /* ===== GAME HERO BANNER (ORDER VIEW) ===== */
+  .game-hero-banner {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1200 50%, #0d0d0d 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 30px 5% 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .game-hero-banner::before {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(193,155,50,0.05));
+  }
+  .game-hero-banner::after {
+    content: '›› ›'; position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
+    font-size: 80px; color: rgba(193,155,50,0.08); font-weight: 900; letter-spacing: -10px;
+  }
+  .game-hero-left { display: flex; align-items: center; gap: 20px; position: relative; z-index: 2; }
+  .game-hero-icon {
+    width: 72px; height: 72px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(193,155,50,0.3); box-shadow: 0 0 20px rgba(193,155,50,0.1);
+    overflow: hidden; background: #1e1e2f;
+  }
+  .game-hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .game-hero-info h2 { font-size: 26px; font-weight: 800; color: #FFF; margin-bottom: 6px; }
+  .game-hero-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hero-badge-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .hero-badge-item i { color: var(--gold); font-size: 11px; }
+
+  /* ===== ORDER VIEW LAYOUT ===== */
+  .order-container {
+    padding: 24px 5% 60px;
+    display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;
+  }
+  .order-left { display: flex; flex-direction: column; gap: 20px; }
+  .order-right { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ===== TXN PANEL ===== */
+  .txn-panel {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .txn-panel-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .step-badge {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--gradient); color: var(--black); font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .txn-panel-header h3 { font-size: 15px; font-weight: 700; color: #FFF; margin: 0; }
+  .txn-panel-body { padding: 20px; }
+
+  /* ===== FORM ELEMENTS ===== */
+  .form-group-custom { margin-bottom: 18px; }
+  .form-label-custom {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--muted); margin-bottom: 8px; letter-spacing: 0.3px;
+  }
+  .form-input-custom {
+    width: 100%; padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px; outline: none;
+    color: var(--body-text); font-size: 14px;
+    font-family: 'Poppins', sans-serif;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-input-custom:focus {
+    border-color: var(--gold); box-shadow: 0 0 0 3px rgba(193,155,50,0.1);
+  }
+  .form-input-custom::placeholder { color: var(--muted); }
+  select.form-input-custom { cursor: pointer; }
+  select.form-input-custom option { background: var(--charcoal); }
+
+  /* Dynamic input container — row bawaan Bootstrap tetap jalan */
+  #dynamic-input-container .form-control {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important; color: var(--body-text) !important;
+    font-family: 'Poppins', sans-serif !important;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 12px 16px !important;
+  }
+  #dynamic-input-container .form-control:focus {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px rgba(193,155,50,0.1) !important;
+    background: rgba(255,255,255,0.06) !important;
+  }
+  #dynamic-input-container .form-control::placeholder { color: var(--muted) !important; }
+
+  /* Nickname box */
+  #nickname-box {
+    background: rgba(60,179,113,0.1) !important;
+    border: 1px solid rgba(60,179,113,0.3) !important;
+    border-radius: 8px; padding: 10px 14px;
+    color: var(--body-text); font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #nickname-box i { color: var(--success); }
+  #player-nickname { font-weight: 700; }
+
+  /* WhatsApp input */
+  #wa_pembeli {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important; color: var(--body-text) !important;
+    font-family: 'Poppins', sans-serif !important; padding: 12px 16px !important;
+  }
+  #wa_pembeli:focus {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px rgba(193,155,50,0.1) !important;
+    background: rgba(255,255,255,0.06) !important;
+  }
+  #wa_pembeli::placeholder { color: var(--muted) !important; }
+
+  /* ===== NOMINAL CARDS ===== */
+  .nominal-card {
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; text-align: center; height: 100%;
+  }
+  .nominal-card:hover { border-color: var(--gold); background: rgba(193,155,50,0.05); }
+  .nominal-card.active {
+    border-color: var(--gold); background: rgba(193,155,50,0.1);
+  }
+  .nominal-card.active::after {
+    content: '✓'; position: absolute; top: 6px; right: 8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--gold); color: var(--black);
+    font-size: 10px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nominal-card .name { font-size: 0.85rem; font-weight: 700; color: #FFF; }
+  .nominal-card .price { font-size: 0.82rem; color: var(--gold-light); font-weight: 700; margin-top: 5px; }
+
+  /* nominal-grid wrapper override */
+  #nominal-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
+
+  /* ===== PAYMENT CARDS (ORDER VIEW) ===== */
+  .payment-option-txn {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .payment-option-txn:hover { border-color: var(--gold); background: rgba(193,155,50,0.03); }
+  .payment-option-txn.active { border-color: var(--gold); background: rgba(193,155,50,0.07); }
+  .payment-option-left-txn {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; font-weight: 600; color: var(--body-text);
+  }
+  .payment-option-logo-txn {
+    font-size: 12px; font-weight: 700; padding: 4px 10px;
+    border-radius: 5px; background: rgba(255,255,255,0.06);
+  }
+  .radio-circle {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--border); transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .payment-option-txn.active .radio-circle {
+    border-color: var(--gold); background: var(--gold);
+  }
+  .payment-option-txn.active .radio-circle::after {
+    content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--black);
+  }
+  .payment-group-title-txn {
+    font-size: 11px; font-weight: 700; color: var(--gold-light);
+    letter-spacing: 1px; text-transform: uppercase; margin: 0 0 10px;
+  }
+
+  /* ===== ORDER SUMMARY ===== */
+  .summary-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; font-size: 13px;
+  }
+  .summary-row .label { color: var(--muted); }
+  .summary-row .value { color: var(--body-text); font-weight: 500; }
+  .summary-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* ===== BTN PAY ===== */
+  .btn-pay-custom {
+    width: 100%; padding: 16px;
+    background: var(--gradient);
+    color: var(--black); font-size: 15px; font-weight: 800;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'Poppins', sans-serif; transition: all 0.25s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    letter-spacing: 0.3px; margin-top: 4px;
+  }
+  .btn-pay-custom:hover { opacity: 0.92; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(193,155,50,0.3); }
+  .secure-note {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 10px; font-size: 11px; color: var(--muted);
+  }
+  .secure-note i { color: var(--gold); }
+
+  /* ===== CONFIRM MODAL (Bootstrap override) ===== */
+  #confirmModal .modal-content {
+    background: var(--card-bg); border: 1px solid var(--gold); border-radius: 20px;
+    color: var(--body-text);
+  }
+  #confirmModal .modal-header {
+    background: linear-gradient(135deg, #9E6710, #C19B32, #EBC166, #C19B32);
+    border-radius: 19px 19px 0 0; border: none;
+  }
+  #confirmModal .modal-title { color: var(--black); font-weight: 800; }
+  #confirmModal .btn-close-white { filter: brightness(0); opacity: 0.7; }
+  #confirmModal .card {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px;
+  }
+  #confirmModal .text-muted { color: var(--muted) !important; }
+  #confirmModal strong { color: #FFF; }
+  #confirmModal #conf-nick { color: var(--gold-light) !important; }
+  #confirmModal #conf-price { color: var(--gold-light) !important; }
+  #confirmModal hr { border-color: var(--border); }
+  #confirmModal #btnEksekusi {
+    background: var(--gradient); border: none;
+    color: var(--black); font-weight: 800; font-size: 15px;
+    border-radius: 10px; padding: 14px;
+    font-family: 'Poppins', sans-serif; transition: all 0.2s;
+  }
+  #confirmModal #btnEksekusi:hover { opacity: 0.9; }
+
+  /* ===== CEK PESANAN MODAL (Bootstrap override) ===== */
+  #modalCekPesanan .modal-content {
+    background: var(--card-bg); border: 1px solid var(--gold); color: var(--body-text);
+    border-radius: 16px;
+  }
+  #modalCekPesanan .modal-header { border-color: var(--border); background: var(--charcoal); border-radius: 15px 15px 0 0; }
+  #modalCekPesanan .modal-title { color: var(--gold-light); }
+  #modalCekPesanan .form-control {
+    background: rgba(255,255,255,0.04) !important; border: 1px solid var(--border) !important;
+    color: var(--body-text) !important; border-radius: 8px !important;
+  }
+  #modalCekPesanan .form-control:focus { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(193,155,50,0.1) !important; }
+  #modalCekPesanan .btn-warning {
+    background: var(--gradient) !important; border: none !important;
+    color: var(--black) !important; font-weight: 700 !important;
+  }
+  #hasil_cek_pesanan { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; }
+
+  /* ===== STATUS MODAL (Bootstrap override) ===== */
+  #statusModal .modal-content {
+    background: var(--card-bg); border: 1px solid var(--gold); border-radius: 20px;
+    color: var(--body-text);
+  }
+
+  /* ===== MOBILE NAV DRAWER ===== */
+  .mobile-nav {
+    position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.98); z-index: 999;
+    padding: 24px 5%; display: none; flex-direction: column; gap: 4px;
+    overflow-y: auto;
+  }
+  .mobile-nav.open { display: flex; }
+  .mobile-nav-link {
+    padding: 14px 16px; border-radius: 8px; color: var(--body-text);
+    font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    text-decoration: none; display: block; background: none; border: none; text-align: left;
+  }
+  .mobile-nav-link:hover { background: rgba(193,155,50,0.08); color: var(--gold-light); }
+  .mobile-nav-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* ===== SCROLL TO TOP ===== */
+  .scroll-top {
+    position: fixed; bottom: 24px; left: 24px; z-index: 999;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--gradient); color: var(--black);
+    border: none; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: all 0.3s; box-shadow: 0 4px 15px rgba(193,155,50,0.3);
+  }
+  .scroll-top.show { opacity: 1; pointer-events: all; }
+  .scroll-top:hover { transform: translateY(-3px); }
+
+  /* ===== TOAST ===== */
+  .toast-custom {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: var(--charcoal); border: 1px solid var(--gold);
+    border-radius: 10px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    min-width: 280px; max-width: 380px;
+    transform: translateX(120%); transition: transform 0.3s ease;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .toast-custom.show { transform: translateX(0); }
+  .toast-icon { font-size: 18px; flex-shrink: 0; }
+  .toast-msg { font-size: 13px; color: var(--body-text); }
+
+  /* ===== ANIMATIONS ===== */
+  .fade-in { animation: fadeIn 0.5s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .gold-shimmer {
+    background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light), var(--gold), var(--gold-dark));
+    background-size: 200% auto;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 200% center; } }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1100px) {
+    .games-grid { grid-template-columns: repeat(3, 1fr); }
+    #game-list > div { flex: 0 0 calc(33.333% - 10px); }
+    .order-container { grid-template-columns: 1fr; }
+    .order-right { order: -1; }
+  }
+  @media (max-width: 768px) {
+    .nav-links, .nav-actions { display: none; }
+    .nav-hamburger { display: flex; }
+    .hero { min-height: 100svh; }
+    .hero-game-art { display: none; }
+    .hero-content { max-width: 100%; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    #game-list > div { flex: 0 0 calc(50% - 7px); }
+    .payment-grid-home { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .promo-banner { flex-direction: column; gap: 20px; }
+    .promo-art { font-size: 60px; align-self: flex-end; }
+    .steps-grid { grid-template-columns: 1fr; }
+    #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
+    .order-container { padding: 16px 4% 50px; }
+    .game-hero-banner { flex-direction: column; align-items: flex-start; gap: 16px; }
+  }
+  @media (max-width: 480px) {
+    .features-grid { grid-template-columns: 1fr; }
+    #game-list > div { flex: 0 0 calc(50% - 7px); }
+    .footer-grid { grid-template-columns: 1fr; }
+    #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
+  }
+  </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-dark topbar-custom sticky-top shadow-sm">
-    <div class="container">
-        <a class="navbar-brand fw-bold fs-4" href="#" onclick="showHome()"><i class="bi bi-controller text-warning"></i> McD Digital</a>
-        
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+  <a class="nav-logo" onclick="showHome()">
+    <div class="logo-icon"></div>
+    <span>McD Digital</span>
+  </a>
 
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan" data-bs-dismiss="collapse">
-                        <i class="bi bi-search"></i> Cek Pesanan
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-warning fw-bold" href="/admin">
-                        <i class="bi bi-person-badge"></i> Admin
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
+  <ul class="nav-links" id="navLinksHome">
+    <li><a class="active" onclick="scrollToSection('home')">Beranda</a></li>
+    <li><a onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
+    <li><a onclick="scrollToSection('promo')">Promo</a></li>
+    <li><a onclick="scrollToSection('footer')">Bantuan</a></li>
+  </ul>
+
+  <div class="nav-actions" id="navActionsHome">
+    <a class="nav-cek-pesanan" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan">
+      <i class="fas fa-search"></i> Cek Pesanan
+    </a>
+    <a class="nav-admin" href="/admin">
+      <i class="fas fa-user-shield"></i> Admin
+    </a>
+  </div>
+
+  <button class="nav-hamburger" id="hamburger" onclick="toggleMobileNav()">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
-<div id="home-view" class="container mt-4 mb-5">
-    <div class="banner-wrapper mb-4 rounded-4 overflow-hidden shadow-sm">
-        <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Promo Banner" class="img-fluid w-100" style="height: 250px; object-fit: cover;">
-    </div>
-    <h4 class="fw-bold mb-3"><i class="bi bi-fire text-danger"></i> Sedang Populer</h4>
-    <div class="row g-3" id="game-list"></div>
+<!-- Mobile Nav Drawer -->
+<div class="mobile-nav" id="mobileNav">
+  <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('home')">Beranda</a>
+  <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('cara-topup')">Cara Top Up</a>
+  <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('promo')">Promo</a>
+  <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('footer')">Bantuan</a>
+  <hr class="mobile-nav-divider">
+  <a class="mobile-nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan" onclick="closeMobileNav()">
+    <i class="fas fa-search"></i> Cek Pesanan
+  </a>
+  <a class="mobile-nav-link" href="/admin"><i class="fas fa-user-shield"></i> Admin</a>
 </div>
 
-<div id="order-view" class="container mt-4 mb-5" style="display: none;">
-    <button class="btn btn-outline-secondary mb-3 rounded-pill px-4" onclick="showHome()"><i class="bi bi-arrow-left"></i> Kembali ke Beranda</button>
-    
-    <div class="row">
-        <div class="col-lg-4 mb-4">
-            <div class="card border-0 shadow-sm rounded-4 text-center p-4 sticky-top" style="top: 80px;">
-                <img id="game-image" src="" class="rounded-3 mx-auto mb-3" style="width: 120px; height: 120px; object-fit: cover;">
-                <h4 id="game-title" class="fw-bold text-uppercase mb-1">Nama Game</h4>
-                <p class="text-muted small">Proses Otomatis 1 Detik.</p>
-            </div>
-        </div>
+<!-- ===== SCROLL TO TOP ===== -->
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <i class="fas fa-chevron-up"></i>
+</button>
 
-        <div class="col-lg-8">
-            <div class="card step-card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0 pt-4 pb-2">
-                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">1</div> Masukkan Data Akun</h5>
-                </div>
-                <div class="card-body px-4 pb-4">
-                    <div id="dynamic-input-container" class="row g-2"></div>
-                    
-                    <div class="mt-3">
-                        <label class="small fw-bold text-muted">Nomor WhatsApp (Untuk Notifikasi)</label>
-                        <input type="number" id="wa_pembeli" class="form-control bg-light" placeholder="Contoh: 08123456789">
-                    </div>
-                    
-                    <div id="nickname-box" class="alert alert-success mt-3 py-2 border-0" style="display: none; background-color: #d1e7dd;">
-                        <i class="bi bi-person-check-fill me-2"></i> Nickname: <strong id="player-nickname" class="text-success fs-5">Mencari...</strong>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card step-card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0 pt-4 pb-2">
-                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">2</div> Pilih Nominal Topup</h5>
-                </div>
-                <div class="card-body px-4 pb-4"><div id="nominal-grid" class="row g-3"></div></div>
-            </div>
-
-            <div class="card step-card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0 pt-4 pb-2">
-                    <h5 class="fw-bold d-flex align-items-center"><div class="step-number me-3">3</div> Pilih Pembayaran</h5>
-                </div>
-                <div class="card-body px-4 pb-4">
-                    <div class="row g-3" id="payment-grid">
-                        <div class="col-md-6"><div class="payment-card active" onclick="selectPayment('QRIS', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" height="25"></div></div>
-                        <div class="col-md-6"><div class="payment-card" onclick="selectPayment('OVO', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/OVO_logo.svg" height="20"></div></div>
-                        <div class="col-md-6"><div class="payment-card" onclick="selectPayment('DANA', this)"><img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" height="20"></div></div>
-                    </div>
-                    <input type="hidden" id="method" value="QRIS">
-                </div>
-            </div>
-
-            <button onclick="validasiSebelumBeli()" class="btn btn-primary btn-lg w-100 rounded-pill py-3 fw-bold shadow-lg fs-5 mb-5">
-                LANJUTKAN PEMBAYARAN <i class="bi bi-chevron-right ms-2"></i>
-            </button>
-        </div>
-    </div>
+<!-- ===== TOAST ===== -->
+<div class="toast-custom" id="toastCustom">
+  <span class="toast-icon" id="toastIcon">✅</span>
+  <span class="toast-msg" id="toastMsg">Berhasil!</span>
 </div>
 
+
+<!-- ========================================
+     PAGE: HOME
+     ======================================== -->
+<div id="home-view" class="page active">
+
+  <!-- HERO -->
+  <section class="hero" id="home">
+    <div class="hero-stars" id="heroStars"></div>
+
+    <!-- BG chevron decorations -->
+    <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
+      <svg style="position:absolute;right:-60px;top:50%;transform:translateY(-50%);width:420px;opacity:0.15;" viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,0 120,0 300,300 120,600 0,600 180,300" fill="url(#chevGrad1)"/>
+        <defs><linearGradient id="chevGrad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9E6710"/><stop offset="50%" stop-color="#C19B32"/><stop offset="100%" stop-color="#EBC166"/></linearGradient></defs>
+      </svg>
+      <svg style="position:absolute;right:80px;top:50%;transform:translateY(-50%);width:350px;opacity:0.08;" viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,0 120,0 300,300 120,600 0,600 180,300" fill="url(#chevGrad2)"/>
+        <defs><linearGradient id="chevGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C19B32"/><stop offset="100%" stop-color="#EBC166"/></linearGradient></defs>
+      </svg>
+    </div>
+
+    <!-- Game art right side -->
+    <div class="hero-game-art" aria-hidden="true">
+      <svg viewBox="0 0 420 480" width="420" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="210,20 400,160 400,320 210,460 20,320 20,160" fill="none" stroke="url(#dGrad)" stroke-width="1.5" opacity="0.5"/>
+        <polygon points="210,60 370,180 370,300 210,420 50,300 50,180" fill="url(#dFill)" opacity="0.08"/>
+        <text x="210" y="260" text-anchor="middle" font-size="120" opacity="0.5">⚔️</text>
+        <defs>
+          <linearGradient id="dGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9E6710"/><stop offset="50%" stop-color="#EBC166"/><stop offset="100%" stop-color="#9E6710"/></linearGradient>
+          <linearGradient id="dFill" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C19B32"/><stop offset="100%" stop-color="#EBC166"/></linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- Hero Content -->
+    <div class="hero-content fade-in">
+      <div class="hero-badge">Top Up Game &amp; Digital Product</div>
+      <h1 class="hero-title">Top Up Cepat,</h1>
+      <span class="hero-title-accent gold-shimmer">Aman &amp; Terpercaya</span>
+      <p class="hero-desc">Nikmati pengalaman top up terbaik dengan proses instan 24 jam dan berbagai metode pembayaran pilihan.</p>
+      <div class="hero-cta">
+        <button class="btn-hero-primary" onclick="document.getElementById('produk-section').scrollIntoView({behavior:'smooth'})">
+          Top Up Sekarang <i class="fas fa-arrow-right"></i>
+        </button>
+        <button class="btn-hero-secondary" onclick="scrollToSection('cara-topup')">
+          Cara Top Up
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES STRIP -->
+  <section class="features-strip" style="padding-top:60px;">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+        <div class="feature-text"><h4>Proses Instan</h4><p>1 Detik Otomatis</p></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="feature-text"><h4>Aman &amp; Terpercaya</h4><p>100% Garansi</p></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-credit-card"></i></div>
+        <div class="feature-text"><h4>Metode Lengkap</h4><p>QRIS, OVO, DANA</p></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-headset"></i></div>
+        <div class="feature-text"><h4>Support 24/7</h4><p>Siap membantu</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POPULAR GAMES — rendered by topup.js via renderGameList() -->
+  <section class="section" id="produk-section">
+    <div class="section-header">
+      <h2 class="section-title"><i class="fas fa-fire" style="color:#EBC166;margin-right:8px;"></i>Sedang Populer</h2>
+    </div>
+    <!-- game-list diisi oleh JS (topup.js → renderGameList) -->
+    <div id="game-list"></div>
+  </section>
+
+  <!-- CARA TOP UP -->
+  <section class="section section-alt" id="cara-topup">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Cara Top Up</h2>
+        <p style="color:var(--muted);font-size:13px;margin-top:4px;">3 langkah mudah untuk top up</p>
+      </div>
+    </div>
+    <div class="steps-grid" style="position:relative;">
+      <div class="step-card-info">
+        <div class="step-num">1</div>
+        <span class="step-icon"><i class="fas fa-gamepad"></i></span>
+        <div class="step-title-info">Pilih Game</div>
+        <div class="step-desc-info">Pilih game dan nominal top up yang kamu inginkan.</div>
+      </div>
+      <div style="position:absolute;top:50%;left:calc(33.33% - 2px);z-index:10;transform:translateY(-50%);color:var(--gold);font-size:22px;pointer-events:none;">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+      <div class="step-card-info">
+        <div class="step-num">2</div>
+        <span class="step-icon"><i class="fas fa-keyboard"></i></span>
+        <div class="step-title-info">Masukkan ID</div>
+        <div class="step-desc-info">Masukkan ID game kamu dengan benar.</div>
+      </div>
+      <div style="position:absolute;top:50%;left:calc(66.66% - 2px);z-index:10;transform:translateY(-50%);color:var(--gold);font-size:22px;pointer-events:none;">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+      <div class="step-card-info">
+        <div class="step-num">3</div>
+        <span class="step-icon"><i class="fas fa-wallet"></i></span>
+        <div class="step-title-info">Pembayaran</div>
+        <div class="step-desc-info">Pilih metode pembayaran dan top up selesai.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAYMENT METHODS -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Metode Pembayaran</h2>
+    </div>
+    <div class="payment-grid-home">
+      <div class="payment-group">
+        <div class="payment-group-title">E-Wallet</div>
+        <div class="payment-logos">
+          <div class="payment-logo dana">◉ DANA</div>
+          <div class="payment-logo ovo">● OVO</div>
+          <div class="payment-logo gopay">⊙ gopay</div>
+          <div class="payment-logo shopeepay">🛍 ShopeePay</div>
+        </div>
+      </div>
+      <div class="payment-group">
+        <div class="payment-group-title">Bank Transfer</div>
+        <div class="payment-logos">
+          <div class="payment-logo bca">▣ BCA</div>
+          <div class="payment-logo bri">▣ BRI</div>
+          <div class="payment-logo bni">▣ BNI</div>
+          <div class="payment-logo mandiri">■ mandiri</div>
+        </div>
+      </div>
+      <div class="payment-group">
+        <div class="payment-group-title">QRIS</div>
+        <div class="payment-logos">
+          <div class="payment-logo" style="color:#555;font-size:14px;letter-spacing:2px;font-weight:900;">QRIS</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROMO BANNER -->
+  <div class="promo-banner" id="promo">
+    <div class="promo-content">
+      <div class="promo-title">Promo Spesial<br>Setiap Hari</div>
+      <p class="promo-desc">Dapatkan berbagai promo menarik setiap hari hanya di McD Digital!</p>
+      <button class="btn-hero-primary" onclick="showToastCustom('success','Pantau terus promo terbaru kami!')">
+        Lihat Promo <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="promo-art">🏅</div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer id="footer">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">
+          <div class="logo-icon"></div>
+          <span>McD Digital</span>
+        </div>
+        <p class="footer-tagline">Top up game &amp; digital product termurah, terpercaya, dan tercepat.</p>
+        <div class="footer-socials">
+          <a class="social-btn" href="#"><i class="fab fa-instagram"></i></a>
+          <a class="social-btn" href="#"><i class="fab fa-tiktok"></i></a>
+          <a class="social-btn" href="#"><i class="fab fa-facebook"></i></a>
+          <a class="social-btn" href="#"><i class="fab fa-discord"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h5>Menu</h5>
+        <ul class="footer-links">
+          <li><a onclick="scrollToSection('home')">Beranda</a></li>
+          <li><a onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
+          <li><a onclick="scrollToSection('promo')">Promo</a></li>
+          <li><a>Bantuan</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Informasi</h5>
+        <ul class="footer-links">
+          <li><a>Tentang Kami</a></li>
+          <li><a>Syarat &amp; Ketentuan</a></li>
+          <li><a>Kebijakan Privasi</a></li>
+          <li><a>Hubungi Kami</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Metode Pembayaran</h5>
+        <div class="footer-payment-logos">
+          <span class="fp-logo">DANA</span>
+          <span class="fp-logo">OVO</span>
+          <span class="fp-logo">gopay</span>
+          <span class="fp-logo">ShopeePay</span>
+          <span class="fp-logo">BCA</span>
+          <span class="fp-logo">BRI</span>
+          <span class="fp-logo">BNI</span>
+          <span class="fp-logo">mandiri</span>
+          <span class="fp-logo">QRIS</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2024 McD Digital. All rights reserved.</div>
+  </footer>
+
+</div><!-- /home-view -->
+
+
+<!-- ========================================
+     PAGE: ORDER VIEW
+     ======================================== -->
+<div id="order-view" class="page" style="padding-top:64px;">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb-bar">
+    <ol class="breadcrumb-custom">
+      <li><a onclick="showHome()">Beranda</a></li>
+      <li><span class="sep">/</span></li>
+      <li><span class="current" id="breadcrumb-game">Top Up Game</span></li>
+    </ol>
+  </div>
+
+  <!-- Game Hero Banner -->
+  <div class="game-hero-banner">
+    <div class="game-hero-left">
+      <div class="game-hero-icon">
+        <img id="game-image" src="" alt="Game">
+      </div>
+      <div class="game-hero-info">
+        <h2 id="game-title">Nama Game</h2>
+        <div class="game-hero-badges">
+          <span class="hero-badge-item"><i class="fas fa-bolt"></i> Proses Otomatis 1 Detik</span>
+          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">•</span>
+          <span class="hero-badge-item"><i class="fas fa-shield-alt"></i> Aman</span>
+          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">•</span>
+          <span class="hero-badge-item"><i class="fas fa-check-circle"></i> 100% Terpercaya</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Container -->
+  <div class="order-container">
+
+    <!-- LEFT COLUMN -->
+    <div class="order-left">
+
+      <!-- STEP 1: Input Data Akun -->
+      <div class="txn-panel">
+        <div class="txn-panel-header">
+          <div class="step-badge">1</div>
+          <h3>Masukkan Data Akun</h3>
+        </div>
+        <div class="txn-panel-body">
+          <!-- dynamic-input-container: diisi topup.js berdasarkan game (ML: user_id + zone_id, else: user_id) -->
+          <div id="dynamic-input-container" class="row g-2 mb-3"></div>
+
+          <div class="form-group-custom">
+            <label class="form-label-custom">Nomor WhatsApp (Untuk Notifikasi)</label>
+            <input type="number" id="wa_pembeli" class="form-input-custom" placeholder="Contoh: 08123456789">
+          </div>
+
+          <!-- Nickname box: diisi topup.js via cekNicknameOtomatis() -->
+          <div id="nickname-box" style="display:none;">
+            <i class="bi bi-person-check-fill"></i>
+            Nickname: <strong id="player-nickname">Mencari...</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Pilih Nominal -->
+      <div class="txn-panel">
+        <div class="txn-panel-header">
+          <div class="step-badge">2</div>
+          <h3>Pilih Nominal Top Up</h3>
+        </div>
+        <div class="txn-panel-body">
+          <!-- nominal-grid: diisi topup.js via renderNominals() dengan class nominal-card -->
+          <div id="nominal-grid" class="row g-3"></div>
+        </div>
+      </div>
+
+    </div><!-- /order-left -->
+
+    <!-- RIGHT COLUMN -->
+    <div class="order-right">
+
+      <!-- STEP 3: Pilih Pembayaran -->
+      <div class="txn-panel">
+        <div class="txn-panel-header">
+          <div class="step-badge">3</div>
+          <h3>Pilih Pembayaran</h3>
+        </div>
+        <div class="txn-panel-body">
+          <!-- Hidden input method — dibaca topup.js via document.getElementById("method").value -->
+          <input type="hidden" id="method" value="QRIS">
+
+          <div class="payment-group-title-txn">QRIS</div>
+          <div class="payment-option-txn active" onclick="selectPayment('QRIS', this)">
+            <div class="payment-option-left-txn">
+              <span class="payment-option-logo-txn" style="color:#555;letter-spacing:2px;font-size:11px;">QRIS</span>
+              <span style="font-size:12px;">Scan QR</span>
+            </div>
+            <div class="radio-circle"></div>
+          </div>
+
+          <div class="payment-group-title-txn" style="margin-top:14px;">E-Wallet</div>
+          <div class="payment-option-txn" onclick="selectPayment('OVO', this)">
+            <div class="payment-option-left-txn">
+              <span class="payment-option-logo-txn" style="color:#4C3494;">● OVO</span>
+            </div>
+            <div class="radio-circle"></div>
+          </div>
+          <div class="payment-option-txn" onclick="selectPayment('DANA', this)">
+            <div class="payment-option-left-txn">
+              <span class="payment-option-logo-txn" style="color:#108EE9;">◉ DANA</span>
+            </div>
+            <div class="radio-circle"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEMBALI + LANJUT BAYAR -->
+      <div class="txn-panel">
+        <div class="txn-panel-body">
+          <button onclick="showHome()" style="
+            width:100%;padding:11px;background:transparent;
+            border:1.5px solid var(--border);border-radius:8px;
+            color:var(--muted);font-size:13px;font-weight:600;
+            cursor:pointer;font-family:'Poppins',sans-serif;
+            transition:all 0.2s;margin-bottom:10px;
+          " onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold-light)'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
+          </button>
+
+          <!-- Tombol ini memanggil validasiSebelumBeli() dari topup.js -->
+          <button onclick="validasiSebelumBeli()" class="btn-pay-custom">
+            LANJUTKAN PEMBAYARAN <i class="fas fa-chevron-right"></i>
+          </button>
+          <div class="secure-note">
+            <i class="fas fa-lock"></i>
+            <span>Transaksi kamu aman dan dilindungi</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /order-right -->
+
+  </div><!-- /order-container -->
+
+</div><!-- /order-view -->
+
+
+<!-- ========================================
+     MODAL: Konfirmasi Pesanan
+     (ID & struktur dipertahankan persis untuk topup.js)
+     ======================================== -->
 <div class="modal fade" id="confirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header bg-primary text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-bold"><i class="bi bi-cart-check"></i> Konfirmasi Pesanan</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted mb-4 text-center">Pastikan data akun dan pesanan Anda sudah benar.</p>
-                <div class="card bg-light border-0 p-3 mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Nama Game:</span><strong id="conf-game"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Target ID:</span><strong id="conf-id"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Nickname:</span><strong id="conf-nick" class="text-success"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Item Topup:</span><strong id="conf-item"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between">
-                        <span class="fw-bold fs-5">Total Bayar:</span><strong id="conf-price" class="text-primary fs-5"></strong>
-                    </div>
-                </div>
-                <button onclick="eksekusiBeli()" id="btnEksekusi" class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5">
-                    BAYAR SEKARANG
-                </button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+        <h5 class="modal-title fw-bold"><i class="bi bi-cart-check"></i> Konfirmasi Pesanan</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-4 text-center">Pastikan data akun dan pesanan Anda sudah benar.</p>
+        <div class="card bg-light border-0 p-3 mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Nama Game:</span><strong id="conf-game"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Target ID:</span><strong id="conf-id"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Nickname:</span><strong id="conf-nick" class="text-success"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Item Topup:</span><strong id="conf-item"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Harga Produk:</span><strong id="conf-base-price"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Biaya Admin:</span><strong id="conf-fee" class="text-danger"></strong>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+            <span class="fw-bold fs-5">Total Bayar:</span><strong id="conf-price" class="text-primary fs-5"></strong>
+          </div>
         </div>
+        <button onclick="eksekusiBeli()" id="btnEksekusi" class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5">
+          BAYAR SEKARANG
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
+<!-- ========================================
+     MODAL: Status Pembayaran
+     (ID dipertahankan untuk topup.js)
+     ======================================== -->
 <div class="modal fade" id="statusModal" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body text-center p-4">
-                <div id="status-icon" class="mb-3"></div>
-                <h4 id="status-text" class="fw-bold">Menunggu Pembayaran</h4>
-                
-                <div id="qris-container" class="my-3 p-3 bg-white rounded-3 shadow-sm" style="display:none;">
-                    <p class="small text-muted mb-2">Scan kode QR di bawah ini:</p>
-                    <img id="qris-image" src="" class="img-fluid rounded" style="max-width: 250px;">
-                    <div class="mt-2 fw-bold text-primary" id="qris-timer"></div>
-                </div>
-
-                <p id="status-desc" class="text-muted small"></p>
-                <div id="status-action" class="mt-3"></div>
-                
-                <button class="btn btn-light mt-4 rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-body text-center p-4">
+        <div id="status-icon" class="mb-3"></div>
+        <h4 id="status-text" class="fw-bold">Menunggu Pembayaran</h4>
+        <div id="qris-container" class="my-3 p-3 bg-white rounded-3 shadow-sm" style="display:none;">
+          <p class="small text-muted mb-2">Scan kode QR di bawah ini:</p>
+          <img id="qris-image" src="" class="img-fluid rounded" style="max-width:250px;">
+          <div class="mt-2 fw-bold text-primary" id="qris-timer"></div>
         </div>
+        <p id="status-desc" class="text-muted small"></p>
+        <div id="status-action" class="mt-3"></div>
+        <button class="btn btn-light mt-4 rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
+      </div>
     </div>
+  </div>
 </div>
 
+<!-- ========================================
+     MODAL: Cek Pesanan
+     (ID dipertahankan untuk topup.js)
+     ======================================== -->
 <div class="modal fade" id="modalCekPesanan" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title fw-bold"><i class="bi bi-search text-warning"></i> Lacak Pesanan</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="small text-muted mb-3">Masukkan Nomor HP atau Order ID untuk mengecek status pesanan kamu.</p>
-                <div class="input-group mb-3">
-                    <input type="text" id="input_cek_pesanan" class="form-control" placeholder="Contoh: 08123456789 atau ID-XXX">
-                    <button class="btn btn-warning fw-bold" onclick="cekStatusPesanan()">Cari</button>
-                </div>
-                
-                <div id="hasil_cek_pesanan" class="d-none mt-3 p-3 rounded bg-secondary text-light">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Item Topup:</span><strong id="conf-item"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Harga Produk:</span><strong id="conf-base-price"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 border-bottom border-secondary pb-2">
-                        <span class="text-muted">Biaya Admin:</span><strong id="conf-fee" class="text-danger"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2">
-                        <span class="fw-bold fs-5">Total Bayar:</span><strong id="conf-price" class="text-primary fs-5"></strong>
-                    </div>
-                    </div>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold"><i class="bi bi-search text-warning"></i> Lacak Pesanan</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">Masukkan Nomor HP atau Order ID untuk mengecek status pesanan kamu.</p>
+        <div class="input-group mb-3">
+          <input type="text" id="input_cek_pesanan" class="form-control" placeholder="Contoh: 08123456789 atau ID-XXX">
+          <button class="btn btn-warning fw-bold" onclick="cekStatusPesanan()">Cari</button>
         </div>
+        <div id="hasil_cek_pesanan" class="d-none mt-3 p-3 rounded"></div>
+      </div>
     </div>
+  </div>
 </div>
 
+
+<!-- ===== SCRIPTS ===== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- topup.js: backend logic tidak diubah sama sekali -->
 <script src="/web/js/topup.js?v=2"></script>
+
+<script>
+/* ===================================================
+   UI HELPER FUNCTIONS
+   (Mengganti / menyambungkan fungsi UI dari index.html
+    agar tetap sinkron dengan topup.js)
+   =================================================== */
+
+// --- showHome: dipanggil topup.js saat kembali ke beranda ---
+function showHome() {
+  document.getElementById("order-view").style.display = "none";
+  document.getElementById("order-view").classList.remove("active");
+  document.getElementById("home-view").style.display = "block";
+  document.getElementById("home-view").classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+// --- openGameOrder mengganti tampilan home->order; dipanggil dari renderGameList() di topup.js ---
+// topup.js sudah handle semuanya (game-title, game-image, dynamic-input-container, dll)
+// Kita hanya perlu update breadcrumb dan pastikan page switch berjalan
+
+// Override showHome agar breadcrumb juga diupdate
+const _origShowHome = window.showHome;
+// (tidak diperlukan override tambahan karena topup.js sudah memanipulasi
+//  home-view dan order-view lewat style.display)
+
+// Patch openGameOrder agar breadcrumb ikut update setelah dipanggil topup.js
+document.addEventListener('DOMContentLoaded', () => {
+  // Patch: setelah topup.js selesai define openGameOrder, kita wrap
+  if (typeof window.openGameOrder === 'function') {
+    const _origOpenGameOrder = window.openGameOrder;
+    window.openGameOrder = function(provider) {
+      _origOpenGameOrder(provider);
+      // Update breadcrumb
+      const bc = document.getElementById('breadcrumb-game');
+      if (bc) bc.textContent = provider;
+      // Pastikan class page ikut terupdate
+      document.getElementById("home-view").classList.remove("active");
+      document.getElementById("order-view").classList.add("active");
+    };
+  }
+});
+
+// --- selectPayment: OVERRIDE agar cocok dengan UI baru (.payment-option-txn) ---
+// topup.js memanggil: selectPayment(method, element)
+// UI baru menggunakan class .payment-option-txn dan .active (bukan .payment-card)
+const _origSelectPayment = window.selectPayment;
+window.selectPayment = function(method, element) {
+  // Update hidden input method (sama seperti topup.js asli)
+  document.getElementById("method").value = method;
+  // Update UI class baru
+  document.querySelectorAll(".payment-option-txn").forEach(el => el.classList.remove("active"));
+  if (element) element.classList.add("active");
+};
+
+// --- Page switcher helpers ---
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleMobileNav() {
+  document.getElementById('mobileNav').classList.toggle('open');
+}
+function closeMobileNav() {
+  document.getElementById('mobileNav').classList.remove('open');
+}
+
+// --- Scroll behaviors ---
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  const navbar = document.getElementById('navbar');
+  if (y > 20) navbar.classList.add('scrolled');
+  else navbar.classList.remove('scrolled');
+  const btn = document.getElementById('scrollTop');
+  if (y > 400) btn.classList.add('show');
+  else btn.classList.remove('show');
+});
+
+// --- Star particles ---
+function generateStars() {
+  const container = document.getElementById('heroStars');
+  if (!container) return;
+  for (let i = 0; i < 30; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 3 + 1;
+    star.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${Math.random()*4+2}s;--delay:${Math.random()*4}s;`;
+    container.appendChild(star);
+  }
+}
+
+// --- Toast helper (UI baru, bukan Bootstrap toast) ---
+let toastTimer = null;
+function showToastCustom(type, msg) {
+  const toast = document.getElementById('toastCustom');
+  const icon = document.getElementById('toastIcon');
+  const msgEl = document.getElementById('toastMsg');
+  const icons = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
+  icon.textContent = icons[type] || 'ℹ️';
+  msgEl.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  generateStars();
+
+  // Setelah topup.js didefinisikan, re-patch openGameOrder
+  setTimeout(() => {
+    if (typeof window.openGameOrder === 'function') {
+      const _orig = window.openGameOrder;
+      window.openGameOrder = function(provider) {
+        _orig(provider);
+        const bc = document.getElementById('breadcrumb-game');
+        if (bc) bc.textContent = provider;
+        document.getElementById("home-view").classList.remove("active");
+        document.getElementById("order-view").classList.add("active");
+      };
+    }
+  }, 100);
+});
+</script>
 </body>
 </html>
