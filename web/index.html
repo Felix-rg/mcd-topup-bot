@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>McD Digital - Topup Game Terpercaya</title>
+  <title>LIXAFA PROJEK - Topup Digital Modern</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <!-- Bootstrap untuk SweetAlert2 & Bootstrap JS (dipakai di backend topup.js) -->
@@ -88,6 +88,7 @@
 
   .nav-links {
     display: flex; align-items: center; gap: 32px; list-style: none;
+    position: relative;
   }
   .nav-links a {
     color: var(--body-text); text-decoration: none;
@@ -95,9 +96,19 @@
     transition: color 0.2s; position: relative; cursor: pointer;
   }
   .nav-links a:hover, .nav-links a.active { color: var(--gold-light); }
-  .nav-links a.active::after {
-    content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
-    height: 2px; background: var(--gradient); border-radius: 1px;
+  .nav-links .nav-indicator {
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    height: 2px;
+    background: var(--gradient);
+    border-radius: 999px;
+    transform: translateX(0);
+    width: 0;
+    opacity: 0;
+    will-change: transform, width, opacity;
+    transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), width 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms ease;
+    pointer-events: none;
   }
 
   .nav-actions { display: flex; align-items: center; gap: 12px; }
@@ -266,10 +277,9 @@
   .games-grid {
     display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;
   }
-  /* Override: game-list menggunakan JS renderGameList() yang inject HTML dengan col-6 col-md-4 col-lg-3
-     Kita bungkus dengan row bootstrap agar tetap kompatibel */
-  #game-list { display: flex; flex-wrap: wrap; gap: 14px; }
-  #game-list > div { flex: 0 0 calc(16.666% - 12px); }
+    /* game-list dirender dinamis oleh JS (kategori -> provider cards) */
+    #game-list { display: block; }
+    .game-category-block { width: 100%; margin-bottom: 24px; }
 
   .game-card {
     background: var(--card-bg); border: 1px solid var(--border);
@@ -345,6 +355,79 @@
     padding: 44px 48px;
     display: flex; align-items: center; justify-content: space-between;
     position: relative; overflow: hidden;
+  }
+
+  .promo-banner-grid {
+    margin: 0 5% 60px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .promo-campaign-card {
+    border: 1px solid var(--border);
+    background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2));
+    border-radius: 14px;
+    padding: 14px;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .promo-campaign-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(235,193,102,0.15);
+    color: var(--gold-light);
+    width: fit-content;
+  }
+
+  .promo-campaign-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    margin: 8px 0 6px;
+  }
+
+  .promo-campaign-desc {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .promo-campaign-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: #c0c7d3;
+  }
+
+  .promo-code-box {
+    border: 1px dashed rgba(235,193,102,0.45);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    background: rgba(235,193,102,0.06);
+  }
+
+  .promo-code-text {
+    color: var(--gold-light);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
   }
   .promo-banner::before {
     content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 50%;
@@ -589,6 +672,9 @@
     font-size: 12px; font-weight: 700; padding: 4px 10px;
     border-radius: 5px; background: rgba(255,255,255,0.06);
   }
+  .payment-logo-qris { color: #c9cdd5; letter-spacing: 1.6px; font-size: 11px; }
+  .payment-logo-ovo { color: #8a7cd7; }
+  .payment-logo-dana { color: #6fc4ff; }
   .radio-circle {
     width: 20px; height: 20px; border-radius: 50%;
     border: 2px solid var(--border); transition: all 0.2s;
@@ -645,9 +731,26 @@
   #confirmModal .card {
     background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px;
   }
-  #confirmModal .text-muted { color: var(--muted) !important; }
-  #confirmModal strong { color: #FFF; }
+  #confirmModal .confirm-summary {
+    background: linear-gradient(180deg, rgba(20,20,20,0.95), rgba(13,13,13,0.98)) !important;
+    border: 1px solid rgba(193,155,50,0.28) !important;
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  #confirmModal .confirm-summary .d-flex {
+    gap: 14px;
+  }
+  #confirmModal .text-muted { color: #b7beca !important; }
+  #confirmModal .confirm-summary .text-muted { color: #c7ccd6 !important; }
+  #confirmModal strong { color: #FFF; font-weight: 700; }
+  #confirmModal .confirm-summary strong { color: #f4f6fb !important; }
+  #confirmModal #conf-game,
+  #confirmModal #conf-id,
+  #confirmModal #conf-item,
+  #confirmModal #conf-method,
+  #confirmModal #conf-base-price { color: #f4f6fb !important; }
   #confirmModal #conf-nick { color: var(--gold-light) !important; }
+  #confirmModal #conf-fee { color: #ffb37e !important; }
   #confirmModal #conf-price { color: var(--gold-light) !important; }
   #confirmModal hr { border-color: var(--border); }
   #confirmModal #btnEksekusi {
@@ -680,6 +783,26 @@
   #statusModal .modal-content {
     background: var(--card-bg); border: 1px solid var(--gold); border-radius: 20px;
     color: var(--body-text);
+  }
+  #statusModal #status-text { color: #f6f7fb; }
+  #statusModal #status-desc { color: #b8bfcb !important; }
+  #statusModal .btn-light {
+    background: var(--gradient); border: none;
+    color: var(--black); font-weight: 700;
+  }
+
+  /* SweetAlert konsisten dengan tema transaksi */
+  .swal2-popup {
+    background: #141414 !important;
+    color: #f2f3f8 !important;
+    border: 1px solid rgba(193,155,50,0.35) !important;
+  }
+  .swal2-title { color: #f6f7fb !important; }
+  .swal2-html-container { color: #c0c7d3 !important; }
+  .swal2-confirm {
+    background: linear-gradient(135deg, #9E6710, #C19B32, #EBC166, #C19B32) !important;
+    color: #0b0b0b !important;
+    font-weight: 700 !important;
   }
 
   /* ===== MOBILE NAV DRAWER ===== */
@@ -740,9 +863,9 @@
   /* ===== RESPONSIVE ===== */
   @media (max-width: 1100px) {
     .games-grid { grid-template-columns: repeat(3, 1fr); }
-    #game-list > div { flex: 0 0 calc(33.333% - 10px); }
     .order-container { grid-template-columns: 1fr; }
-    .order-right { order: -1; }
+    .order-left { order: 1; }
+    .order-right { order: 2; }
   }
   @media (max-width: 768px) {
     .nav-links, .nav-actions { display: none; }
@@ -751,10 +874,10 @@
     .hero-game-art { display: none; }
     .hero-content { max-width: 100%; }
     .features-grid { grid-template-columns: repeat(2, 1fr); }
-    #game-list > div { flex: 0 0 calc(50% - 7px); }
     .payment-grid-home { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
     .promo-banner { flex-direction: column; gap: 20px; }
+    .promo-banner-grid { grid-template-columns: 1fr; }
     .promo-art { font-size: 60px; align-self: flex-end; }
     .steps-grid { grid-template-columns: 1fr; }
     #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
@@ -763,7 +886,6 @@
   }
   @media (max-width: 480px) {
     .features-grid { grid-template-columns: 1fr; }
-    #game-list > div { flex: 0 0 calc(50% - 7px); }
     .footer-grid { grid-template-columns: 1fr; }
     #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
   }
@@ -775,14 +897,15 @@
 <nav class="navbar" id="navbar">
   <a class="nav-logo" onclick="showHome()">
     <div class="logo-icon"></div>
-    <span>McD Digital</span>
+    <span>LIXAFA PROJEK</span>
   </a>
 
   <ul class="nav-links" id="navLinksHome">
-    <li><a class="active" onclick="scrollToSection('home')">Beranda</a></li>
-    <li><a onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
-    <li><a onclick="scrollToSection('promo')">Promo</a></li>
-    <li><a onclick="scrollToSection('footer')">Bantuan</a></li>
+    <li><a id="nav-home" class="active" onclick="scrollToSection('home')">Beranda</a></li>
+    <li><a id="nav-cara-topup" onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
+    <li><a id="nav-promo" onclick="scrollToSection('promo')">Promo</a></li>
+    <li><a id="nav-footer" onclick="scrollToSection('footer')">Bantuan</a></li>
+    <span class="nav-indicator" id="navIndicator"></span>
   </ul>
 
   <div class="nav-actions" id="navActionsHome">
@@ -979,7 +1102,7 @@
   <div class="promo-banner" id="promo">
     <div class="promo-content">
       <div class="promo-title">Promo Spesial<br>Setiap Hari</div>
-      <p class="promo-desc">Dapatkan berbagai promo menarik setiap hari hanya di McD Digital!</p>
+      <p class="promo-desc">Dapatkan berbagai promo menarik setiap hari hanya di LIXAFA PROJEK!</p>
       <button class="btn-hero-primary" onclick="showToastCustom('success','Pantau terus promo terbaru kami!')">
         Lihat Promo <i class="fas fa-arrow-right"></i>
       </button>
@@ -987,13 +1110,15 @@
     <div class="promo-art">🏅</div>
   </div>
 
+  <div class="promo-banner-grid" id="promoCampaignGrid"></div>
+
   <!-- FOOTER -->
   <footer id="footer">
     <div class="footer-grid">
       <div>
         <div class="footer-logo">
           <div class="logo-icon"></div>
-          <span>McD Digital</span>
+          <span>LIXAFA PROJEK</span>
         </div>
         <p class="footer-tagline">Top up game &amp; digital product termurah, terpercaya, dan tercepat.</p>
         <div class="footer-socials">
@@ -1036,7 +1161,7 @@
         </div>
       </div>
     </div>
-    <div class="footer-bottom">© 2024 McD Digital. All rights reserved.</div>
+    <div class="footer-bottom">© 2024 LIXAFA PROJEK. All rights reserved.</div>
   </footer>
 
 </div><!-- /home-view -->
@@ -1134,7 +1259,7 @@
           <div class="payment-group-title-txn">QRIS</div>
           <div class="payment-option-txn active" onclick="selectPayment('QRIS', this)">
             <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn" style="color:#555;letter-spacing:2px;font-size:11px;">QRIS</span>
+              <span class="payment-option-logo-txn payment-logo-qris">QRIS</span>
               <span style="font-size:12px;">Scan QR</span>
             </div>
             <div class="radio-circle"></div>
@@ -1143,15 +1268,24 @@
           <div class="payment-group-title-txn" style="margin-top:14px;">E-Wallet</div>
           <div class="payment-option-txn" onclick="selectPayment('OVO', this)">
             <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn" style="color:#4C3494;">● OVO</span>
+              <span class="payment-option-logo-txn payment-logo-ovo">● OVO</span>
             </div>
             <div class="radio-circle"></div>
           </div>
           <div class="payment-option-txn" onclick="selectPayment('DANA', this)">
             <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn" style="color:#108EE9;">◉ DANA</span>
+              <span class="payment-option-logo-txn payment-logo-dana">◉ DANA</span>
             </div>
             <div class="radio-circle"></div>
+          </div>
+
+          <div class="form-group-custom mt-3 mb-0">
+            <label class="form-label-custom">Kode Promo (Opsional)</label>
+            <div class="input-group">
+              <input type="text" id="promo_code" class="form-input-custom" placeholder="Contoh: IDULFITRI2026">
+              <button class="btn btn-outline-warning" type="button" onclick="applyPromoCode()">Apply</button>
+            </div>
+            <div id="promo_code_feedback" class="small mt-2" style="color: var(--muted);"></div>
           </div>
         </div>
       </div>
@@ -1201,7 +1335,7 @@
       </div>
       <div class="modal-body p-4">
         <p class="text-muted mb-4 text-center">Pastikan data akun dan pesanan Anda sudah benar.</p>
-        <div class="card bg-light border-0 p-3 mb-3">
+        <div class="card confirm-summary border-0 p-3 mb-3">
           <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">Nama Game:</span><strong id="conf-game"></strong>
           </div>
@@ -1287,7 +1421,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- topup.js: backend logic tidak diubah sama sekali -->
-<script src="/web/js/topup.js?v=2"></script>
+<script src="/web/js/topup.js?v=14"></script>
 
 <script>
 /* ===================================================
@@ -1302,6 +1436,7 @@ function showHome() {
   document.getElementById("order-view").classList.remove("active");
   document.getElementById("home-view").style.display = "block";
   document.getElementById("home-view").classList.add("active");
+  setActiveNavSection('home');
   window.scrollTo(0, 0);
 }
 
@@ -1344,9 +1479,75 @@ window.selectPayment = function(method, element) {
 };
 
 // --- Page switcher helpers ---
+function setActiveNavSection(id) {
+  document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
+
+  const target = document.getElementById(`nav-${id}`);
+  if (target) {
+    target.classList.add('active');
+    moveNavIndicator(target);
+    return;
+  }
+
+  const homeTarget = document.getElementById('nav-home');
+  if (homeTarget) {
+    homeTarget.classList.add('active');
+    moveNavIndicator(homeTarget);
+  }
+}
+
+function moveNavIndicator(target) {
+  const indicator = document.getElementById('navIndicator');
+  const navLinks = document.getElementById('navLinksHome');
+  if (!indicator || !navLinks || !target) return;
+
+  window.requestAnimationFrame(() => {
+    const linkRect = target.getBoundingClientRect();
+    const navRect = navLinks.getBoundingClientRect();
+    const left = linkRect.left - navRect.left;
+
+    indicator.style.width = `${linkRect.width}px`;
+    indicator.style.transform = `translateX(${left}px)`;
+    indicator.style.opacity = '1';
+  });
+}
+
+function getCurrentHomeSection() {
+  const homeView = document.getElementById('home-view');
+  if (!homeView || homeView.style.display === 'none') return 'home';
+
+  const sections = ['footer', 'promo', 'cara-topup', 'home'];
+  const offset = window.innerHeight * 0.28;
+
+  for (const sectionId of sections) {
+    const el = document.getElementById(sectionId);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.top <= offset && rect.bottom > offset) return sectionId;
+  }
+
+  return 'home';
+}
+
 function scrollToSection(id) {
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
+  if (!el) return;
+
+  setActiveNavSection(id);
+
+  const homeView = document.getElementById('home-view');
+  const orderView = document.getElementById('order-view');
+  const isOnOrderView = homeView && orderView && homeView.style.display === 'none';
+
+  if (isOnOrderView) {
+    showHome();
+    window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return;
+  }
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function toggleMobileNav() {
@@ -1365,6 +1566,21 @@ window.addEventListener('scroll', () => {
   const btn = document.getElementById('scrollTop');
   if (y > 400) btn.classList.add('show');
   else btn.classList.remove('show');
+
+  if (document.getElementById('home-view')?.style.display !== 'none') {
+    const currentSection = getCurrentHomeSection();
+    if (currentSection) setActiveNavSection(currentSection);
+  }
+});
+
+window.addEventListener('resize', () => {
+  const activeLink = document.querySelector('.nav-links a.active');
+  if (activeLink) moveNavIndicator(activeLink);
+});
+
+window.addEventListener('load', () => {
+  const activeLink = document.querySelector('.nav-links a.active');
+  if (activeLink) moveNavIndicator(activeLink);
 });
 
 // --- Star particles ---
@@ -1394,9 +1610,128 @@ function showToastCustom(type, msg) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
+async function showPromoWelcomePopup() {
+  try {
+    // Jangan ganggu jika user masih punya transaksi berjalan.
+    if (localStorage.getItem('last_order_id')) return;
+
+    const homeView = document.getElementById('home-view');
+    if (homeView && homeView.style.display === 'none') return;
+
+    const res = await fetch('/api/promos/active');
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const promos = Array.isArray(data?.promos) ? data.promos : [];
+    if (!promos.length) return;
+
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const popupPromos = promos.slice(0, 10);
+    const firstPromo = popupPromos[0] || {};
+    const singleMode = popupPromos.length === 1;
+
+    const promoSlidesHtml = popupPromos.map((promo, idx) => {
+      const safeTitle = escapeHtml(promo.title || `Promo ${idx + 1}`);
+      const safeDesc = escapeHtml(promo.description || 'Promo terbatas untuk kamu, cek sekarang.');
+      const safeBadge = escapeHtml(promo.badge || 'Promo');
+      const safeImage = escapeHtml(promo.image_url || '');
+      const imageSection = promo.image_url
+        ? `<img src="${safeImage}" alt="Promo" style="width:100%;max-height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(193,155,50,0.25);margin-bottom:8px;" />`
+        : '';
+
+      return `<div class="promo-slide" data-index="${idx}" style="display:${idx === 0 ? 'block' : 'none'};text-align:left;padding:12px;border:1px solid rgba(193,155,50,0.22);border-radius:12px;background:rgba(255,255,255,0.02);margin-bottom:10px;">${imageSection}<div style="display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(235,193,102,0.18);color:#EBC166;font-size:11px;font-weight:700;margin-bottom:6px;">${safeBadge}</div><div style="font-size:15px;font-weight:700;color:#f6f7fb;line-height:1.35;">${safeTitle}</div><div style="font-size:12px;color:#c6ceda;line-height:1.55;margin-top:4px;">${safeDesc}</div></div>`;
+    }).join('');
+
+    const dotsHtml = popupPromos.map((_, idx) =>
+      `<button type="button" data-dot-index="${idx}" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;background:${idx === 0 ? '#EBC166' : 'rgba(235,193,102,0.35)'};"></button>`
+    ).join('');
+
+    const sliderNavHtml = popupPromos.length > 1
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;"><button type="button" id="promoSlidePrev" class="btn btn-sm btn-outline-warning">Sebelumnya</button><div id="promoSlideDots" style="display:flex;align-items:center;gap:7px;">${dotsHtml}</div><button type="button" id="promoSlideNext" class="btn btn-sm btn-outline-warning">Berikutnya</button></div>`
+      : '';
+
+    const result = await Swal.fire({
+      title: singleMode ? (firstPromo.title || 'Promo Spesial Buat Kamu') : `${popupPromos.length} Promo Aktif Hari Ini`,
+      html: `<div style="max-height:52vh;overflow:hidden;padding-right:2px;"><div id="promoSlidesWrap">${promoSlidesHtml}</div>${sliderNavHtml}</div>`,
+      showCancelButton: true,
+      confirmButtonText: singleMode ? (firstPromo.cta_text || 'Pakai Promo') : 'Lihat Semua Promo',
+      cancelButtonText: 'Nanti Saja',
+      allowOutsideClick: true,
+      background: '#111111',
+      color: '#f5f6fa',
+      customClass: {
+        popup: 'promo-welcome-popup'
+      },
+      didOpen: () => {
+        const popup = Swal.getPopup();
+        if (!popup) return;
+
+        let activeIndex = 0;
+        const slides = Array.from(popup.querySelectorAll('.promo-slide'));
+        const dots = Array.from(popup.querySelectorAll('[data-dot-index]'));
+
+        const renderSlide = (idx) => {
+          activeIndex = idx;
+          slides.forEach((el, slideIdx) => {
+            el.style.display = slideIdx === idx ? 'block' : 'none';
+          });
+          dots.forEach((el, dotIdx) => {
+            el.style.background = dotIdx === idx ? '#EBC166' : 'rgba(235,193,102,0.35)';
+          });
+        };
+
+        const prevBtn = popup.querySelector('#promoSlidePrev');
+        const nextBtn = popup.querySelector('#promoSlideNext');
+        if (prevBtn) {
+          prevBtn.addEventListener('click', () => {
+            const nextIndex = activeIndex <= 0 ? slides.length - 1 : activeIndex - 1;
+            renderSlide(nextIndex);
+          });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', () => {
+            const nextIndex = activeIndex >= slides.length - 1 ? 0 : activeIndex + 1;
+            renderSlide(nextIndex);
+          });
+        }
+        dots.forEach((dot) => {
+          dot.addEventListener('click', () => {
+            const idx = Number(dot.getAttribute('data-dot-index') || '0');
+            renderSlide(idx);
+          });
+        });
+
+      },
+    });
+
+    if (result.isConfirmed) {
+      if (singleMode && typeof window.handlePromoCta === 'function' && firstPromo.cta_url) {
+        window.handlePromoCta(firstPromo.cta_url);
+      } else {
+        const targetSection = document.getElementById('produk-section');
+        if (targetSection) {
+          targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Gagal menampilkan popup promo:', err);
+  }
+}
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   generateStars();
+
+  setTimeout(() => {
+    showPromoWelcomePopup();
+  }, 600);
 
   // Setelah topup.js didefinisikan, re-patch openGameOrder
   setTimeout(() => {

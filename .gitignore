@@ -5,3 +5,10 @@ receipts/*
 !receipts/.gitkeep
 *.sqlite3
 backups/
+/.venv/
+ngrok.exe
+ngrok.exe.old
+app.log
+lixafa.db
+.idea/
+.vscode/

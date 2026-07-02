@@ -1,17 +1,5 @@
-from pydantic import BaseModel
+"""Shim re-export for models to app.models"""
 
-class TopUpRequest(BaseModel):
-    phone: str
-    provider: str
-    nominal: str
-    method: str
+from app.models import *  # noqa: F401,F403
 
-class TopUpResponse(BaseModel):
-    id: str
-    status: str
-    message: str
-    invoice_url: str
-
-class AdminLogin(BaseModel):
-    username: str
-    password: str
+__all__ = getattr(__import__("app.models", fromlist=["*"]), "__all__", [])

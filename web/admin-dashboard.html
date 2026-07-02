@@ -1,24 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Admin Dashboard - McD Digital</title>
-    <!-- Bootstrap CSS -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - LIXAFA PROJEK</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        .sidebar { min-height: 100vh; background-color: #212529; color: white; padding-top: 20px; }
-        .sidebar .nav-link { color: #adb5bd; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; transition: 0.3s; cursor: pointer; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #0d6efd; color: white; }
-        .stat-card { border-radius: 12px; border: none; border-left: 5px solid #0d6efd; transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .table-custom { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    </style>
+    <link rel="stylesheet" href="/web/css/admin.css">
 </head>
-<body class="bg-light">
+<body class="admin-shell bg-light">
     <nav class="navbar navbar-dark bg-dark d-md-none shadow-sm sticky-top">
         <div class="container-fluid">
-            <span class="navbar-brand fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> McD Admin</span>
+            <span class="navbar-brand fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</span>
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -28,11 +21,12 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-2 sidebar shadow-lg px-3 d-none d-md-block">
-                <h4 class="text-center fw-bold mb-4 text-white"><i class="bi bi-lightning-charge-fill text-warning"></i> McD Admin</h4>
+                <h4 class="text-center fw-bold mb-4 text-white"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</h4>
                 <hr class="border-secondary">
                 <div class="nav flex-column">
                     <a class="nav-link" onclick="loadOrders()" id="nav-orders"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
                     <a class="nav-link" onclick="loadProducts()" id="nav-products"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                    <a class="nav-link" onclick="loadPromos()" id="nav-promos"><i class="bi bi-badge-ad me-2"></i> Promo</a>
                 </div>
                 <hr class="border-secondary mt-5">
                 <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Logout</button>
@@ -40,13 +34,14 @@
 
             <div class="offcanvas offcanvas-start bg-dark text-white d-md-none" tabindex="-1" id="mobileSidebar" style="width: 280px;">
                 <div class="offcanvas-header border-bottom border-secondary">
-                    <h5 class="offcanvas-title fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> McD Admin</h5>
+                    <h5 class="offcanvas-title fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
                 </div>
                 <div class="offcanvas-body">
                     <div class="nav flex-column">
                         <a class="nav-link text-white mb-2" onclick="loadOrders()" data-bs-dismiss="offcanvas"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
                         <a class="nav-link text-white mb-2" onclick="loadProducts()" data-bs-dismiss="offcanvas"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                        <a class="nav-link text-white mb-2" onclick="loadPromos()" data-bs-dismiss="offcanvas"><i class="bi bi-badge-ad me-2"></i> Promo</a>
                         <hr class="border-secondary">
                         <a class="nav-link text-danger" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
                     </div>
@@ -58,8 +53,7 @@
                     <h3 class="fw-bold m-0" id="page-title" style="font-size: 1.2rem;">Dashboard</h3>
                     <button class="btn btn-sm btn-danger d-md-none" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
                 </div>
-                
-                <!-- Statistik Card -->
+
                 <div class="row mb-4">
                     <div class="col-6 col-md-3 mb-3">
                         <div class="card stat-card shadow-sm p-3">
@@ -87,7 +81,6 @@
                     </div>
                 </div>
 
-                <!-- Tombol Tambah Produk (Akan disembunyikan pakai JS kalau di menu Transaksi) -->
                 <div id="product_actions" class="mb-3 text-end" style="display: none;">
                     <button id="btnSync" class="btn btn-success shadow-sm me-2">
                         <i class="bi bi-arrow-repeat"></i> Tarik Data Digiflazz
@@ -100,6 +93,12 @@
                     </button>
                 </div>
 
+                <div id="promo_actions" class="mb-3 text-end" style="display: none;">
+                    <button class="btn btn-primary shadow-sm" onclick="showAddPromoModal()">
+                        <i class="bi bi-plus-lg"></i> Tambah Promo
+                    </button>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="input-group shadow-sm">
@@ -108,21 +107,38 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Tabel -->
+
                 <div id="category_nav" class="mb-3" style="display: none;">
-                    <ul class="nav nav-pills bg-white p-2 rounded-pill shadow-sm d-inline-flex">
-                    </ul>
+                    <ul class="nav nav-pills bg-white p-2 rounded-pill shadow-sm d-inline-flex"></ul>
                 </div>
 
-                <div id="product_container" style="display: none;">
+                <div id="product_container" style="display: none;"></div>
+
+                <div id="promo_container" style="display: none;">
+                    <div class="table-custom p-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Judul</th>
+                                        <th>Badge</th>
+                                        <th>Status</th>
+                                        <th>Website</th>
+                                        <th>Periode</th>
+                                        <th>Deskripsi</th>
+                                        <th class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="promo_table_body"></tbody>
+                            </table>
+                        </div>
                     </div>
+                </div>
 
                 <div id="order_container">
                     <div class="table-custom p-3">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="main_table">
-                                </table>
+                            <table class="table table-hover align-middle mb-0" id="main_table"></table>
                         </div>
                     </div>
                 </div>
@@ -130,20 +146,41 @@
         </div>
     </div>
 
-    <!-- MODAL TAMBAH PRODUK -->
     <div class="modal fade" id="addProductModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Tambah Produk Baru</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-2"><label>Provider</label><input type="text" id="add_provider" class="form-control" placeholder="Contoh: telkomsel"></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Provider</label><input type="text" id="add_provider" class="form-control" placeholder="Contoh: telkomsel"></div>
+                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="add_category" class="form-control" placeholder="Contoh: Mobile Legends"></div>
+                    </div>
                     <div class="mb-2"><label>Nama Produk</label><input type="text" id="add_name" class="form-control" placeholder="Contoh: Telkomsel 10K"></div>
                     <div class="mb-2"><label>SKU Digiflazz</label><input type="text" id="add_sku" class="form-control" placeholder="Contoh: s10"></div>
-                    <div class="mb-2"><label>Harga Modal (Cost)</label><input type="number" id="add_cost" class="form-control"></div>
-                    <div class="mb-2"><label>Harga Jual (Price)</label><input type="number" id="add_price" class="form-control"></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Harga Modal (Cost)</label><input type="number" id="add_cost" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Harga Jual (Price)</label><input type="number" id="add_price" class="form-control"></div>
+                    </div>
+                    <div class="mb-2"><label>Deskripsi</label><textarea id="add_description" class="form-control" rows="2"></textarea></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Logo URL</label><input type="text" id="add_logo_url" class="form-control" placeholder="/web/uploads/... or https://..."></div>
+                        <div class="col-md-6 mb-2"><label>Upload Logo</label><input type="file" id="add_logo_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="add_image_url" class="form-control" placeholder="/web/uploads/... or https://..."></div>
+                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="add_image_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-2"><label>Promo Title</label><input type="text" id="add_promo_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Promo Badge</label><input type="text" id="add_promo_badge" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Display Order</label><input type="number" id="add_display_order" class="form-control" value="0"></div>
+                    </div>
+                    <div class="mb-2"><label>Promo Text</label><textarea id="add_promo_text" class="form-control" rows="2"></textarea></div>
+                    <div class="mb-2"><label>Promo URL</label><input type="text" id="add_promo_url" class="form-control"></div>
+                    <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="add_active" checked><label class="form-check-label" for="add_active">Aktif</label></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -153,69 +190,183 @@
         </div>
     </div>
 
-    <!-- MODAL EDIT PRODUK -->
     <div class="modal fade" id="editProductModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title">Edit Harga Produk</h5>
+                    <h5 class="modal-title">Edit Produk</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_id">
-                    <div class="mb-2"><label>Harga Modal (Cost)</label><input type="number" id="edit_cost" class="form-control"></div>
-                    <div class="mb-2"><label>Harga Jual (Price)</label><input type="number" id="edit_price" class="form-control"></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Provider</label><input type="text" id="edit_provider" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="edit_category" class="form-control"></div>
+                    </div>
+                    <div class="mb-2"><label>Nama Produk</label><input type="text" id="edit_name" class="form-control"></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Harga Modal (Cost)</label><input type="number" id="edit_cost" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Harga Jual (Price)</label><input type="number" id="edit_price" class="form-control"></div>
+                    </div>
+                    <div class="mb-2"><label>Deskripsi</label><textarea id="edit_description" class="form-control" rows="2"></textarea></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Logo URL</label><input type="text" id="edit_logo_url" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Upload Logo</label><input type="file" id="edit_logo_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="edit_image_url" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="edit_image_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-2"><label>Promo Title</label><input type="text" id="edit_promo_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Promo Badge</label><input type="text" id="edit_promo_badge" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Display Order</label><input type="number" id="edit_display_order" class="form-control" value="0"></div>
+                    </div>
+                    <div class="mb-2"><label>Promo Text</label><textarea id="edit_promo_text" class="form-control" rows="2"></textarea></div>
+                    <div class="mb-2"><label>Promo URL</label><input type="text" id="edit_promo_url" class="form-control"></div>
+                    <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="edit_active"><label class="form-check-label" for="edit_active">Aktif</label></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary w-100" onclick="saveEditProduct()">Update Harga</button>
+                    <button type="button" class="btn btn-primary w-100" onclick="saveEditProduct()">Update Produk</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="bulkMarkupModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title fw-bold"><i class="bi bi-tags"></i> Set Profit Massal</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info small">
-                    Fitur ini akan mereset harga jual menjadi: <br>
-                    <b>Harga Modal + (Harga Modal × Persen Profit)</b>.
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-tags"></i> Set Profit Massal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Pilih Kategori / Provider</label>
-                    <select id="bulk_brand" class="form-select">
-                        <option value="">Memuat list provider...</option>
-                    </select>
-                </div>
-                <div class="row">
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold small">Profit (%)</label>
-                        <div class="input-group">
-                            <input type="number" id="bulk_percent" class="form-control" placeholder="Contoh: 5" min="1">
-                            <span class="input-group-text">%</span>
+                <div class="modal-body">
+                    <div class="alert alert-info small">
+                        Fitur ini akan mereset harga jual menjadi: <br>
+                        <b>Harga Modal + (Harga Modal × Persen Profit)</b>.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Pilih Kategori / Provider</label>
+                        <select id="bulk_brand" class="form-select"><option value="">Memuat list provider...</option></select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold small">Profit (%)</label>
+                            <div class="input-group">
+                                <input type="number" id="bulk_percent" class="form-control" placeholder="Contoh: 5" min="1">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold small">Minimal Cuan (Rp)</label>
+                            <input type="number" id="bulk_min_profit" class="form-control" placeholder="Contoh: 1000" value="1000">
                         </div>
                     </div>
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold small">Minimal Cuan (Rp)</label>
-                        <input type="number" id="bulk_min_profit" class="form-control" placeholder="Contoh: 1000" value="1000">
-                    </div>
+                    <small class="text-muted d-block mt-1">Jika hasil persen lebih kecil dari Minimal Cuan, maka sistem otomatis mengambil nilai Minimal Cuan.</small>
                 </div>
-                <small class="text-muted d-block mt-1">Jika hasil persen lebih kecil dari Minimal Cuan, maka sistem otomatis mengambil nilai Minimal Cuan.</small>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-warning fw-bold" onclick="saveBulkMarkup()">Simpan Massal</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-warning fw-bold" onclick="saveBulkMarkup()">Simpan Massal</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-    <!-- Wajib untuk fungsionalitas Modal Bootstrap -->
+    <div class="modal fade" id="addPromoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Tambah Promo Baru</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><label>Judul</label><input type="text" id="promo_title" class="form-control"></div>
+                    <div class="mb-2"><label>Kode Promo</label><input type="text" id="promo_code" class="form-control"></div>
+                    <div class="mb-2"><label>Badge</label><input type="text" id="promo_badge" class="form-control"></div>
+                    <div class="mb-2"><label>Deskripsi</label><textarea id="promo_description" class="form-control" rows="3"></textarea></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Tipe Promo</label><select id="promo_rule_type" class="form-select"><option value="content">Konten Saja</option><option value="price">Diskon Harga</option></select></div>
+                        <div class="col-md-6 mb-2"><label>Cakupan</label><select id="promo_target_scope" class="form-select"><option value="all">Semua Produk</option><option value="category">Kategori</option><option value="provider">Provider</option><option value="sku">SKU Spesifik</option></select></div>
+                    </div>
+                    <small class="text-muted d-block mb-2">Untuk harga coret, pilih Tipe Promo = Diskon Harga. Jika Kode Promo diisi, diskon berlaku setelah user menekan Apply kode.</small>
+                    <div class="mb-2"><label>Target Value (opsional)</label><input type="text" id="promo_target_value" class="form-control" placeholder="Contoh: mobile legend, free fire, ml_10k"></div>
+                    <small class="text-muted d-block mb-2">Judul promo boleh sama. Untuk beberapa target, pisahkan dengan koma.</small>
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-2"><label>Jenis Diskon</label><select id="promo_discount_type" class="form-select"><option value="">-</option><option value="percent">Persen</option><option value="fixed">Nominal</option></select></div>
+                        <div class="col-md-4 mb-2"><label>Nilai Diskon</label><input type="number" id="promo_discount_value" class="form-control" min="0" step="0.01"></div>
+                        <div class="col-md-4 mb-2"><label>Maks Diskon</label><input type="number" id="promo_max_discount" class="form-control" min="0" step="0.01"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>CTA Text</label><input type="text" id="promo_cta_text" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>CTA URL</label><input type="text" id="promo_cta_url" class="form-control"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="promo_image_url" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="promo_image_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Starts At</label><input type="datetime-local" id="promo_starts_at" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Ends At</label><input type="datetime-local" id="promo_ends_at" class="form-control"></div>
+                    </div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="promo_show_on_website" checked><label class="form-check-label" for="promo_show_on_website">Tampilkan di website</label></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="promo_active" checked><label class="form-check-label" for="promo_active">Aktif</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewPromo()">Simpan Promo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editPromoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Edit Promo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_promo_id">
+                    <div class="mb-2"><label>Judul</label><input type="text" id="edit_promo_title" class="form-control"></div>
+                    <div class="mb-2"><label>Kode Promo</label><input type="text" id="edit_promo_code" class="form-control"></div>
+                    <div class="mb-2"><label>Badge</label><input type="text" id="edit_promo_badge" class="form-control"></div>
+                    <div class="mb-2"><label>Deskripsi</label><textarea id="edit_promo_description" class="form-control" rows="3"></textarea></div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Tipe Promo</label><select id="edit_promo_rule_type" class="form-select"><option value="content">Konten Saja</option><option value="price">Diskon Harga</option></select></div>
+                        <div class="col-md-6 mb-2"><label>Cakupan</label><select id="edit_promo_target_scope" class="form-select"><option value="all">Semua Produk</option><option value="category">Kategori</option><option value="provider">Provider</option><option value="sku">SKU Spesifik</option></select></div>
+                    </div>
+                    <small class="text-muted d-block mb-2">Untuk harga coret, pilih Tipe Promo = Diskon Harga. Jika Kode Promo diisi, diskon berlaku setelah user menekan Apply kode.</small>
+                    <div class="mb-2"><label>Target Value (opsional)</label><input type="text" id="edit_promo_target_value" class="form-control" placeholder="Contoh: mobile legend, free fire, ml_10k"></div>
+                    <small class="text-muted d-block mb-2">Untuk beberapa target, pisahkan dengan koma.</small>
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-2"><label>Jenis Diskon</label><select id="edit_promo_discount_type" class="form-select"><option value="">-</option><option value="percent">Persen</option><option value="fixed">Nominal</option></select></div>
+                        <div class="col-md-4 mb-2"><label>Nilai Diskon</label><input type="number" id="edit_promo_discount_value" class="form-control" min="0" step="0.01"></div>
+                        <div class="col-md-4 mb-2"><label>Maks Diskon</label><input type="number" id="edit_promo_max_discount" class="form-control" min="0" step="0.01"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>CTA Text</label><input type="text" id="edit_promo_cta_text" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>CTA URL</label><input type="text" id="edit_promo_cta_url" class="form-control"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="edit_promo_image_url" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="edit_promo_image_file" class="form-control" accept="image/*"></div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2"><label>Starts At</label><input type="datetime-local" id="edit_promo_starts_at" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Ends At</label><input type="datetime-local" id="edit_promo_ends_at" class="form-control"></div>
+                    </div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_promo_show_on_website"><label class="form-check-label" for="edit_promo_show_on_website">Tampilkan di website</label></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_promo_active"><label class="form-check-label" for="edit_promo_active">Aktif</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" onclick="saveEditPromo()">Simpan Perubahan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/web/js/dashboard.js?v=6"></script>
+    <script src="/web/js/dashboard.js?v=8"></script>
 </body>
 </html>

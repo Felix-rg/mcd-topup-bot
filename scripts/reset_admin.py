@@ -1,14 +1,18 @@
 import asyncio
-from database import db_execute, db_query, init_db
-from utils import hash_password
 
-async def main():
+from app.database import db_execute, db_query, init_db
+from app.security import hash_password
+from core.settings import settings
+
+
+async def main() -> None:
     print("⏳ Menghubungkan ke PostgreSQL dan memastikan tabel siap...")
-    # Pastikan tabel admin sudah terbuat
     await init_db()
-    
-    username = "admin"
-    password_mentah = "mcd123" # Silakan ganti sesuai keinginan Anda
+
+    username = settings.default_admin_username or "admin"
+    password_mentah = settings.default_admin_password
+    if not password_mentah:
+        raise RuntimeError("Setel DEFAULT_ADMIN_PASSWORD di environment sebelum menjalankan reset admin")
     
     print(f"🔐 Melakukan hashing password untuk username: {username}...")
     hashed_pw = hash_password(password_mentah)

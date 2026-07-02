@@ -1,28 +1,5 @@
-from passlib.context import CryptContext
-from collections import defaultdict
-import time
+"""Shim re-export for utils to app.utils."""
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.utils import *  # noqa: F401,F403
 
-rate_limit_store = defaultdict(list)
-
-def hash_password(password):
-    return pwd_context.hash(password)
-
-def verify_password(password, hashed):
-    return pwd_context.verify(password, hashed)
-
-def check_rate_limit(identifier, limit=5, window=60):
-
-    now = time.time()
-
-    rate_limit_store[identifier] = [
-        t for t in rate_limit_store[identifier]
-        if now - t < window
-    ]
-
-    if len(rate_limit_store[identifier]) >= limit:
-        return False
-
-    rate_limit_store[identifier].append(now)
-    return True
+__all__ = getattr(__import__("app.utils", fromlist=["*"]), "__all__", [])

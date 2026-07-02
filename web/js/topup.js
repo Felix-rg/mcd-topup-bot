@@ -1,10 +1,15 @@
 let products = [];
+let productCategories = [];
+let providerIndex = {};
 let selectedProvider = null;
 let selectedSku = null;
 let selectedItemName = null;
 let selectedPrice = null;
+let selectedProviderData = null;
 let currentOrderId = null;
 let confirmModal;
+let activePromos = [];
+let appliedPromoCode = null;
 
 // VARIABEL BARU: Kunci Anti-Kedip
 let currentPopupStatus = null; 
@@ -20,6 +25,7 @@ const imageDb = {
 document.addEventListener("DOMContentLoaded", () => {
     confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
     loadProducts();
+    loadActivePromos();
 
     const lastOrderId = localStorage.getItem("last_order_id");
     console.log("🔥 CEK RADAR TAGIHAN: ", lastOrderId);
@@ -40,43 +46,236 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+async function loadActivePromos() {
+    try {
+        const res = await fetch("/api/promos/active");
+        if (!res.ok) return;
+        const data = await res.json();
+        activePromos = Array.isArray(data.promos) ? data.promos : [];
+        renderPromoCampaigns();
+    } catch (err) {
+        console.error("Gagal memuat promo aktif:", err);
+    }
+}
+
+function renderPromoCampaigns() {
+    const container = document.getElementById("promoCampaignGrid");
+    if (!container) return;
+
+    if (!activePromos.length) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const campaignPromos = activePromos.slice(0, 6);
+    container.innerHTML = campaignPromos.map((promo) => {
+        const badge = promo.badge || (promo.rule_type === "price" ? "Diskon" : "Info");
+        const desc = promo.description || "Promo terbatas, cek detail dan periode promo sekarang.";
+        const ctaText = (promo.cta_text || "Lihat Promo").trim();
+        const ctaUrl = (promo.cta_url || "").trim();
+        const ctaButton = ctaUrl
+            ? `<button class="btn btn-sm btn-warning mt-2" onclick="handlePromoCta('${String(ctaUrl).replace(/'/g, "\\'")}')">${ctaText}</button>`
+            : "";
+        return `
+            <div class="promo-campaign-card">
+                <div>
+                    <div class="promo-campaign-badge">${badge}</div>
+                    <div class="promo-campaign-title">${promo.title || "Promo LIXAFA"}</div>
+                    <div class="promo-campaign-desc">${desc}</div>
+                </div>
+                <div>
+                    <div class="promo-campaign-meta">
+                        <span>${promo.discount_type === "percent" ? `${promo.discount_value}% OFF` : (promo.discount_type === "fixed" ? `Potongan Rp ${Number(promo.discount_value || 0).toLocaleString('id-ID')}` : "Promo Spesial")}</span>
+                        <span>${promo.target_scope ? `Target: ${promo.target_scope}` : ""}</span>
+                    </div>
+                    ${ctaButton}
+                </div>
+            </div>`;
+    }).join("");
+}
+
+window.handlePromoCta = function(rawUrl) {
+    const ctaUrl = String(rawUrl || "").trim();
+    if (!ctaUrl) return;
+
+    if (ctaUrl.startsWith("#")) {
+        const sectionId = ctaUrl.slice(1);
+        if (sectionId) {
+            scrollToSection(sectionId);
+        }
+        return;
+    }
+
+    if (ctaUrl.startsWith("modal:")) {
+        const modalId = ctaUrl.slice("modal:".length);
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+        return;
+    }
+
+    if (ctaUrl.startsWith("game:")) {
+        const provider = ctaUrl.slice("game:".length).trim();
+        if (provider) {
+            openGameOrder(provider);
+        }
+        return;
+    }
+
+    if (ctaUrl === "order" || ctaUrl === "/order") {
+        const section = document.getElementById("produk-section");
+        if (section) {
+            showHome();
+            section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        return;
+    }
+
+    if (ctaUrl.startsWith("http://") || ctaUrl.startsWith("https://") || ctaUrl.startsWith("/")) {
+        window.open(ctaUrl, "_blank", "noopener");
+        return;
+    }
+
+    const section = document.getElementById(ctaUrl);
+    if (section) {
+        scrollToSection(ctaUrl);
+    }
+}
+
 async function loadProducts() {
     try {
         const res = await fetch("/api/products");
         if (!res.ok) throw new Error("Gagal mengambil data produk");
-        products = await res.json();
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            products = data;
+            productCategories = [];
+        } else {
+            products = Array.isArray(data.products) ? data.products : [];
+            productCategories = Array.isArray(data.categories) ? data.categories : [];
+        }
+        providerIndex = {};
+        if (productCategories.length > 0) {
+            productCategories.forEach(category => {
+                (category.providers || []).forEach(provider => {
+                    providerIndex[(provider.name || "").toLowerCase()] = provider;
+                });
+            });
+        } else {
+            const grouped = {};
+            products.forEach(product => {
+                const providerName = product.provider || "Lainnya";
+                if (!grouped[providerName]) {
+                    grouped[providerName] = {
+                        name: providerName,
+                        logo_url: product.logo_url || "",
+                        image_url: product.image_url || "",
+                        description: product.description || "",
+                        promo_title: product.promo_title || "",
+                        promo_text: product.promo_text || "",
+                        promo_badge: product.promo_badge || "",
+                        promo_url: product.promo_url || "",
+                        items: [],
+                    };
+                }
+                grouped[providerName].items.push(product);
+            });
+            Object.values(grouped).forEach(provider => {
+                providerIndex[provider.name.toLowerCase()] = provider;
+            });
+        }
         renderGameList();
     } catch (e) {
         console.error("Error load products:", e);
     }
 }
 
+function normalizeUrl(url) {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) return url;
+    return `/${url.replace(/^\/+/, "")}`;
+}
+
+function getProviderData(provider) {
+    return providerIndex[(provider || "").toLowerCase()] || null;
+}
+
 function getImageUrl(provider) {
-    const key = provider.toLowerCase();
+    const data = getProviderData(provider);
+    if (data) {
+        const candidate = data.logo_url || data.image_url;
+        if (candidate) return normalizeUrl(candidate);
+    }
+    const key = (provider || "").toLowerCase();
     for (let k in imageDb) { if (key.includes(k)) return imageDb[k]; }
     return imageDb["default"];
 }
 
 function renderGameList() {
     const container = document.getElementById("game-list");
-    const providers = [...new Set(products.map(p => p.provider))];
     container.innerHTML = "";
-    providers.forEach(p => {
-        container.innerHTML += `
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="game-card" onclick="openGameOrder('${p}')">
-                    <img src="${getImageUrl(p)}" alt="${p}">
-                    <div class="game-title">${p}</div>
-                </div>
-            </div>`;
-    });
+
+    if (productCategories.length > 0) {
+        productCategories.forEach(category => {
+            const providers = Array.isArray(category.providers) ? category.providers : [];
+            if (!providers.length) return;
+
+            container.innerHTML += `
+                <div class="game-category-block">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="text-uppercase small text-muted fw-bold">Kategori</div>
+                            <h5 class="mb-0 text-white">${category.name}</h5>
+                        </div>
+                        <span class="badge rounded-pill text-bg-dark border border-warning-subtle">${providers.length} provider</span>
+                    </div>
+                    <div class="row g-3">
+                        ${providers.map(provider => {
+                            const heroImage = normalizeUrl(provider.logo_url || provider.image_url || getImageUrl(provider.name));
+                            const badge = provider.promo_badge ? `<span class="game-badge">${provider.promo_badge}</span>` : "";
+                            return `
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <div class="game-card" onclick="openGameOrder('${provider.name.replace(/'/g, "\\'")}')">
+                                        <img src="${heroImage}" alt="${provider.name}">
+                                        ${badge}
+                                        <div class="game-title">${provider.name}</div>
+                                    </div>
+                                </div>`;
+                        }).join("")}
+                    </div>
+                </div>`;
+        });
+        return;
+    }
+
+    const providers = [...new Set(products.map(p => p.provider))];
+    container.innerHTML = `
+        <div class="game-category-block">
+            <div class="row g-3">
+                ${providers.map(p => `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="game-card" onclick="openGameOrder('${p.replace(/'/g, "\\'")}')">
+                            <img src="${getImageUrl(p)}" alt="${p}">
+                            <div class="game-title">${p}</div>
+                        </div>
+                    </div>`).join("")}
+            </div>
+        </div>`;
 }
 
 function openGameOrder(provider) {
     selectedProvider = provider;
+    selectedProviderData = getProviderData(provider);
     selectedSku = null;
     document.getElementById("game-title").innerText = provider;
     document.getElementById("game-image").src = getImageUrl(provider);
+    const gameMeta = document.getElementById("game-meta");
+    if (gameMeta) {
+        gameMeta.innerText = selectedProviderData?.description || "";
+        gameMeta.style.display = selectedProviderData?.description ? "block" : "none";
+    }
     
     const inputContainer = document.getElementById("dynamic-input-container");
     if (provider.toLowerCase().includes("mobile legends")) {
@@ -101,34 +300,101 @@ function openGameOrder(provider) {
 function showHome() {
     document.getElementById("order-view").style.display = "none";
     document.getElementById("home-view").style.display = "block";
+    appliedPromoCode = null;
     window.scrollTo(0, 0);
 }
 
 function renderNominals(provider) {
     const grid = document.getElementById("nominal-grid");
     grid.innerHTML = "";
-    products.filter(p => p.provider === provider).forEach(p => {
+    const items = selectedProviderData?.items || products.filter(p => p.provider === provider);
+    items.forEach(p => {
+        const effectivePrice = Number(p.price || 0);
+        const originalPrice = Number(p.original_price || p.price || 0);
+        const hasDiscount = originalPrice > effectivePrice;
+        const promoBadge = p.promo_applied?.badge || p.promo_badge || "";
         grid.innerHTML += `
             <div class="col-6 col-md-4">
-                <div class="nominal-card" onclick="selectSku('${p.sku}', '${p.name}', ${p.price}, this)">
+                <div class="nominal-card" onclick="selectSku('${p.sku}', '${p.name}', ${effectivePrice}, ${originalPrice}, this)">
                     <div class="name">${p.name}</div>
-                    <div class="price">Rp ${p.price.toLocaleString('id-ID')}</div>
+                    ${hasDiscount ? `<div class="small text-decoration-line-through fw-semibold" style="color:#ff4d4f;">Rp ${originalPrice.toLocaleString('id-ID')}</div>` : ""}
+                    <div class="price">Rp ${effectivePrice.toLocaleString('id-ID')}</div>
+                    ${hasDiscount && promoBadge ? `<div class="small text-warning fw-semibold mt-1">${promoBadge}</div>` : ""}
                 </div>
             </div>`;
     });
 }
 
-function selectSku(sku, name, price, element) {
+function selectSku(sku, name, price, originalPrice, element) {
     selectedSku = sku;
     selectedItemName = name;
     selectedPrice = price;
+    window.selectedOriginalPrice = originalPrice;
     document.querySelectorAll(".nominal-card").forEach(el => el.classList.remove("active"));
     element.classList.add("active");
+
+    // Ganti nominal harus re-apply manual agar validasi promo tidak otomatis.
+    appliedPromoCode = null;
+    const feedback = document.getElementById("promo_code_feedback");
+    if (feedback) {
+        feedback.innerText = "";
+        feedback.style.color = "var(--muted)";
+    }
+}
+
+window.applyPromoCode = async function() {
+    const feedback = document.getElementById("promo_code_feedback");
+    const promoCodeInput = document.getElementById("promo_code");
+    const code = promoCodeInput?.value?.trim() || "";
+
+    if (!selectedSku) {
+        if (feedback) {
+            feedback.innerText = "Pilih nominal dulu sebelum apply promo.";
+            feedback.style.color = "#ff4d4f";
+        }
+        return;
+    }
+
+    if (!code) {
+        appliedPromoCode = null;
+        if (feedback) {
+            feedback.innerText = "";
+            feedback.style.color = "var(--muted)";
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/promos/validate?sku=${encodeURIComponent(selectedSku)}&code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (!res.ok) {
+            appliedPromoCode = null;
+            if (feedback) {
+                feedback.innerText = data.detail || "Kode promo tidak valid.";
+                feedback.style.color = "#ff4d4f";
+            }
+            return;
+        }
+
+        appliedPromoCode = code;
+        selectedPrice = Number(data.final_price || selectedPrice || 0);
+        window.selectedOriginalPrice = Number(data.original_price || selectedPrice || 0);
+        if (feedback) {
+            feedback.innerText = `Promo aktif. Hemat Rp ${Number(data.discount_amount || 0).toLocaleString('id-ID')}.`;
+            feedback.style.color = "#3CB371";
+        }
+    } catch (err) {
+        appliedPromoCode = null;
+        if (feedback) {
+            feedback.innerText = "Gagal memvalidasi kode promo.";
+            feedback.style.color = "#ff4d4f";
+        }
+    }
 }
 
 function selectPayment(method, element) {
     document.getElementById("method").value = method;
-    document.querySelectorAll(".payment-card").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".payment-option-txn").forEach(el => el.classList.remove("active"));
     element.classList.add("active");
 }
 
@@ -214,6 +480,7 @@ function validasiSebelumBeli() {
     // 4. Hitung Biaya Admin Tripay
     let adminFee = 0;
     const basePrice = selectedPrice; 
+    const originalPrice = Number(window.selectedOriginalPrice || selectedPrice || 0);
     const method = document.getElementById("method").value;
 
     if (method === "QRIS") {
@@ -234,7 +501,11 @@ function validasiSebelumBeli() {
     document.getElementById("conf-method").innerText = method;
     
     // Tampilkan rincian harga + Fee
-    document.getElementById("conf-base-price").innerText = "Rp " + basePrice.toLocaleString('id-ID');
+    if (originalPrice > basePrice) {
+        document.getElementById("conf-base-price").innerText = `Rp ${basePrice.toLocaleString('id-ID')} (Normal: Rp ${originalPrice.toLocaleString('id-ID')})`;
+    } else {
+        document.getElementById("conf-base-price").innerText = "Rp " + basePrice.toLocaleString('id-ID');
+    }
     document.getElementById("conf-fee").innerText = "+ Rp " + adminFee.toLocaleString('id-ID');
     document.getElementById("conf-price").innerText = "Rp " + totalPrice.toLocaleString('id-ID');
 
@@ -265,6 +536,7 @@ async function eksekusiBeli() {
                 target_id: target_id,
                 provider: selectedProvider, 
                 nominal: selectedSku, 
+                promo_code: appliedPromoCode,
                 nickname: nickname,
                 method 
             })
@@ -312,41 +584,50 @@ async function updateStatusRealtime() {
         }
 
         const data = await res.json();
-        const s = (data.status || "").toLowerCase();
+        const stage = (data.stage || "pending_payment").toLowerCase();
         
-        if (s.includes("success")) { 
+        if (stage === "success") { 
             if (currentPopupStatus !== "success") {
                 Swal.fire({
                     title: 'Berhasil!',
                     text: 'Pesanan Anda telah masuk ke akun!',
                     icon: 'success',
+                    background: '#111111',
+                    color: '#f5f5f5',
+                    confirmButtonColor: '#C19B32',
                     confirmButtonText: 'Tutup'
                 }).then(() => { location.reload(); }); // Langsung refresh kalau di-close
                 currentPopupStatus = "success";
             }
             localStorage.removeItem("last_order_id");
             currentOrderId = null; 
-        } else if (s.includes("failed")) {
+        } else if (stage === "failed") {
             if (currentPopupStatus !== "failed") {
                 Swal.fire({
                     title: 'Dibatalkan',
                     text: 'Pembayaran gagal atau telah kadaluarsa.',
                     icon: 'error',
+                    background: '#111111',
+                    color: '#f5f5f5',
+                    confirmButtonColor: '#C19B32',
                     confirmButtonText: 'Tutup'
                 }).then(() => { location.reload(); });
                 currentPopupStatus = "failed";
             }
             localStorage.removeItem("last_order_id");
             currentOrderId = null; 
-        } 
-        // 🛡️ PERBAIKAN BUG UNPAID DI SINI: Pake tanda === biar ngeceknya harus persis kata "paid"
-        else if (s === "processing" || s === "paid") {
+        } else if (stage === "processing") {
             showStatusResult("processing", data.qr_url, data.invoice_url); 
             setTimeout(updateStatusRealtime, 5000); 
-        } else { 
-            // Kalau UNPAID jatuhnya ke sini
-            showStatusResult("pending", data.qr_url, data.invoice_url); 
+        } else if (stage === "provider_pending") {
+            showStatusResult("provider_pending", data.qr_url, data.invoice_url); 
+            setTimeout(updateStatusRealtime, 5000);
+        } else if (stage === "pending_payment") {
+            showStatusResult("pending_payment", data.qr_url, data.invoice_url); 
             setTimeout(updateStatusRealtime, 5000); 
+        } else {
+            showStatusResult("processing", data.qr_url, data.invoice_url);
+            setTimeout(updateStatusRealtime, 5000);
         }
     } catch(e) { 
         setTimeout(updateStatusRealtime, 5000); 
@@ -358,7 +639,7 @@ function showStatusResult(status, qrUrl, invoiceUrl) {
     if (currentPopupStatus === status) return; 
     currentPopupStatus = status; // Kalau status baru, catat statusnya!
 
-    if (status === "pending") {
+    if (status === "pending_payment") {
         Swal.fire({
             title: 'Selesaikan Pembayaran',
             html: `
@@ -373,19 +654,56 @@ function showStatusResult(status, qrUrl, invoiceUrl) {
             `,
             showConfirmButton: false,
             allowOutsideClick: false,
-            allowEscapeKey: false
+            allowEscapeKey: false,
+            background: '#111111',
+            color: '#f5f5f5'
         });
     } else if (status === "processing") {
         Swal.fire({
-            title: 'Pembayaran Diterima!',
+            title: 'Menunggu Pesanan Dikirim',
             html: `
                 <div class="spinner-border text-success my-3" role="status" style="width: 3rem; height: 3rem;"></div><br>
-                <h5 class="text-success fw-bold mb-2">Sedang Mengirim Pesanan...</h5>
-                <p class="small text-muted">Mohon tunggu sebentar, sistem sedang memproses topup ke ID Game Anda secara otomatis.</p>
+                <h5 class="text-success fw-bold mb-2">Pembayaran diterima, sistem sedang menembak provider...</h5>
+                <p class="small text-muted">Mohon tunggu sebentar, pesanan sedang dikirim ke provider dan akan otomatis berubah jika sudah masuk.</p>
             `,
             showConfirmButton: false,
             allowOutsideClick: false,
-            allowEscapeKey: false
+            allowEscapeKey: false,
+            background: '#111111',
+            color: '#f5f5f5'
+        });
+    } else if (status === "provider_pending") {
+        Swal.fire({
+            title: 'Menunggu Provider',
+            html: `
+                <div class="spinner-border text-warning my-3" role="status" style="width: 3rem; height: 3rem;"></div><br>
+                <h5 class="text-warning fw-bold mb-2">Pesanan sudah dikirim ke provider</h5>
+                <p class="small text-muted">Sekarang sistem menunggu konfirmasi dari provider. Silakan tunggu, status akan berubah otomatis saat sukses.</p>
+            `,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            background: '#111111',
+            color: '#f5f5f5'
+        });
+    } else if (status === "pending_payment") {
+        Swal.fire({
+            title: 'Selesaikan Pembayaran',
+            html: `
+                <div class="spinner-border text-primary my-3" role="status" style="width: 3rem; height: 3rem;"></div><br>
+                <a href="${invoiceUrl}" target="_blank" class="btn btn-primary rounded-pill px-4 py-3 mt-3 fw-bold shadow-lg w-100" style="text-decoration: none; font-size: 1.1rem;">
+                    <i class="bi bi-wallet2"></i> BUKA HALAMAN PEMBAYARAN
+                </a>
+                <button onclick="batalkanTransaksi()" class="btn btn-outline-danger rounded-pill px-4 py-2 mt-3 fw-bold w-100">
+                    <i class="bi bi-x-circle"></i> Batalkan & Buat Pesanan Baru
+                </button>
+                <p class="small text-muted mt-3">Popup ini akan otomatis berubah jika Anda sudah membayar.</p>
+            `,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            background: '#111111',
+            color: '#f5f5f5'
         });
     }
 }

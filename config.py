@@ -1,28 +1,5 @@
-# ===== FILE: config.py =====
-import os
-from dotenv import load_dotenv
+"""Shim for config re-exporting from app.config"""
 
-load_dotenv()
+from app.config import *  # noqa: F401,F403
 
-ADMIN_SECRET = os.getenv("ADMIN_SECRET")
-
-# ===== DIGIFLAZZ =====
-DIGIFLAZZ_USERNAME = os.getenv("DIGIFLAZZ_USERNAME")
-DIGIFLAZZ_KEY = os.getenv("DIGIFLAZZ_KEY")
-# Tambahkan di bagian ===== DIGIFLAZZ ===== pada config.py
-DIGIFLAZZ_SECRET = os.getenv("DIGIFLAZZ_SECRET")
-
-# ===== TRIPAY =====
-TRIPAY_API_KEY = os.getenv("TRIPAY_API_KEY")
-TRIPAY_PRIVATE_KEY = os.getenv("TRIPAY_PRIVATE_KEY")
-TRIPAY_MERCHANT_CODE = os.getenv("TRIPAY_MERCHANT_CODE")
-TRIPAY_CALLBACK_URL = os.getenv("TRIPAY_CALLBACK_URL")
-TRIPAY_BASE_URL = os.getenv("TRIPAY_BASE_URL")
-
-INSTANCE_ID = os.getenv("INSTANCE_ID")
-TOKEN_ULTRAMSG = os.getenv("TOKEN_ULTRAMSG")  
-
-BASE_URL = os.getenv("BASE_URL")  # URL publik untuk callback dan link QR
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-ENV = "DEV"   # ganti ke "PROD" kalau sudah live
+__all__ = getattr(__import__("app.config", fromlist=["*"]), "__all__", [])
