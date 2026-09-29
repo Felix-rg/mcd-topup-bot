@@ -279,13 +279,32 @@ async def _finish_provider_attempt(
     )
 
 
+async def _discard_stale_provider_attempt(order_id: str, attempt_number: int) -> None:
+    """Close an attempt whose worker no longer owns the order lease.
+
+    The response is deliberately not recorded as a completed provider result:
+    a callback or another lease owner may already have established the order's
+    outcome.  Keeping an explicit discarded audit record is safer than leaving
+    an ambiguous ``SENDING`` attempt behind.
+    """
+
+    await _finish_provider_attempt(
+        order_id,
+        attempt_number,
+        request_state="DISCARDED",
+        local_outcome="STALE_DISCARDED",
+        error_type="ProviderLeaseLost",
+        error_message="Respons provider diabaikan karena lease worker sudah tidak valid",
+    )
+
+
 async def _record_safe_provider_retry(
     order_id: str,
     lease_id: str,
     retry_count: int,
     values: dict[str, Any],
     error_message: str,
-) -> bool:
+) -> tuple[bool, bool]:
     """Record a retry only when the adapter proved no external send occurred."""
 
     next_retry_count = retry_count + 1
@@ -310,6 +329,8 @@ async def _record_safe_provider_retry(
         WHERE id=:id
           AND provider_claim_id=:lease_id
           AND provider_claim_expires_at > CURRENT_TIMESTAMP
+          AND payment_status='PAID'
+          AND topup_status='PROCESSING'
           AND provider_outcome='SENT_UNKNOWN'
         """,
         {
@@ -325,7 +346,7 @@ async def _record_safe_provider_retry(
             **values,
         },
     )
-    return bool(updated and exhausted)
+    return bool(updated), bool(updated and exhausted)
 
 
 def _parse_datetime(value: Any) -> Optional[datetime]:
@@ -1078,8 +1099,7 @@ async def polling_status_engine() -> None:
             values = _provider_payload_values(data)
             provider_id = str(data.get("trx_id") or data.get("transaction_id") or "")
             if classification == DIGIFLAZZ_OUTCOME_SENT_UNKNOWN:
-                await _finish_provider_attempt(order_id, attempt_number, request_state="UNKNOWN", local_outcome="SENT_UNKNOWN", provider_status=status, provider_transaction_id=provider_id, provider_response=response, error_type=str((response or {}).get("_error_type") or "UnknownProviderOutcome"), error_message=str(data.get("message") or "Provider outcome tidak diketahui"))
-                await db_execute(
+                updated = await db_execute_rowcount(
                     """
                     UPDATE topup
                     SET provider_claim_id=NULL,
@@ -1103,34 +1123,51 @@ async def polling_status_engine() -> None:
                         "provider_payload": values["provider_payload"],
                     },
                 )
+                if updated:
+                    await _finish_provider_attempt(
+                        order_id,
+                        attempt_number,
+                        request_state="UNKNOWN",
+                        local_outcome="SENT_UNKNOWN",
+                        provider_status=status,
+                        provider_transaction_id=provider_id,
+                        provider_response=response,
+                        error_type=str((response or {}).get("_error_type") or "UnknownProviderOutcome"),
+                        error_message=str(data.get("message") or "Provider outcome tidak diketahui"),
+                    )
+                else:
+                    await _discard_stale_provider_attempt(order_id, attempt_number)
                 continue
             if classification == DIGIFLAZZ_OUTCOME_RETRYABLE_NOT_SENT:
                 error_message = data.get("message") or "Request provider belum dikirim dan akan dicoba ulang"
-                exhausted = await _record_safe_provider_retry(
+                updated, exhausted = await _record_safe_provider_retry(
                     order_id,
                     lease_id,
                     _int_value(retry_count),
                     values,
                     str(error_message),
                 )
-                await _finish_provider_attempt(
-                    order_id,
-                    attempt_number,
-                    request_state="NOT_SENT",
-                    local_outcome="FAILED" if exhausted else "RETRYABLE_NOT_SENT",
-                    provider_status=status,
-                    provider_transaction_id=provider_id,
-                    provider_response=response,
-                    error_type=str((response or {}).get("_error_type") or "SafePreSendFailure"),
-                    error_message=str(error_message),
-                )
-                if exhausted:
-                    await release_order_promotions(order_id, include_redeemed=True)
+                if updated:
+                    await _finish_provider_attempt(
+                        order_id,
+                        attempt_number,
+                        request_state="NOT_SENT",
+                        local_outcome="FAILED" if exhausted else "RETRYABLE_NOT_SENT",
+                        provider_status=status,
+                        provider_transaction_id=provider_id,
+                        provider_response=response,
+                        error_type=str((response or {}).get("_error_type") or "SafePreSendFailure"),
+                        error_message=str(error_message),
+                    )
+                    if exhausted:
+                        await release_order_promotions(order_id, include_redeemed=True)
+                else:
+                    await _discard_stale_provider_attempt(order_id, attempt_number)
                 continue
             if classification == DIGIFLAZZ_OUTCOME_SUCCESS:
                 updated = await db_execute_rowcount("UPDATE topup SET topup_status='SUCCESS', provider_outcome='SUCCESS', sn=CASE WHEN COALESCE(:sn, '')='' THEN sn ELSE :sn END, provider_retry_count=0, provider_last_error=NULL, provider_rc=:provider_rc, provider_price=:provider_price, provider_selling_price=:provider_selling_price, provider_last_balance=:provider_last_balance, provider_last_check_at=CURRENT_TIMESTAMP, provider_claim_id=NULL, provider_claimed_at=NULL, provider_claim_expires_at=NULL, provider_payload=:provider_payload, status_updated_at=CURRENT_TIMESTAMP WHERE id=:id AND provider_claim_id=:lease_id AND provider_claim_expires_at > CURRENT_TIMESTAMP AND payment_status='PAID' AND topup_status='PROCESSING' AND provider_outcome='SENT_UNKNOWN'", {"id": order_id, "lease_id": lease_id, "sn": data.get("sn") or "", **values})
-                await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="SUCCESS", provider_status=status, provider_transaction_id=provider_id, provider_response=response)
                 if updated:
+                    await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="SUCCESS", provider_status=status, provider_transaction_id=provider_id, provider_response=response)
                     await finalize_order_promotions(order_id)
                     phone_rows = await db_query("SELECT phone FROM topup WHERE id=:id", {"id": order_id})
                     if phone_rows and phone_rows[0][0]:
@@ -1150,21 +1187,27 @@ async def polling_status_engine() -> None:
                                 "event_key": f"WHATSAPP:topup:{order_id}:Topup sukses",
                             },
                         )
+                else:
+                    await _discard_stale_provider_attempt(order_id, attempt_number)
                 continue
             if classification == DIGIFLAZZ_OUTCOME_PENDING:
-                await db_execute("UPDATE topup SET topup_status='PENDING_PROVIDER', provider_outcome='PENDING_PROVIDER', provider_retry_count=0, provider_last_error=NULL, provider_last_check_at=CURRENT_TIMESTAMP, provider_claim_id=NULL, provider_claimed_at=NULL, provider_claim_expires_at=NULL, provider_payload=:provider_payload, status_updated_at=CURRENT_TIMESTAMP WHERE id=:id AND provider_claim_id=:lease_id AND provider_claim_expires_at > CURRENT_TIMESTAMP AND payment_status='PAID' AND topup_status='PROCESSING' AND provider_outcome='SENT_UNKNOWN'", {"id": order_id, "lease_id": lease_id, **values})
-                await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="PENDING_PROVIDER", provider_status=status, provider_transaction_id=provider_id, provider_response=response)
+                updated = await db_execute_rowcount("UPDATE topup SET topup_status='PENDING_PROVIDER', provider_outcome='PENDING_PROVIDER', provider_retry_count=0, provider_last_error=NULL, provider_last_check_at=CURRENT_TIMESTAMP, provider_claim_id=NULL, provider_claimed_at=NULL, provider_claim_expires_at=NULL, provider_payload=:provider_payload, status_updated_at=CURRENT_TIMESTAMP WHERE id=:id AND provider_claim_id=:lease_id AND provider_claim_expires_at > CURRENT_TIMESTAMP AND payment_status='PAID' AND topup_status='PROCESSING' AND provider_outcome='SENT_UNKNOWN'", {"id": order_id, "lease_id": lease_id, **values})
+                if updated:
+                    await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="PENDING_PROVIDER", provider_status=status, provider_transaction_id=provider_id, provider_response=response)
+                else:
+                    await _discard_stale_provider_attempt(order_id, attempt_number)
                 continue
             error_message = data.get("message") or "Provider menolak transaksi"
             updated = await db_execute_rowcount("UPDATE topup SET topup_status='FAILED', provider_outcome='FAILED', provider_last_error=:error, provider_rc=:provider_rc, provider_price=:provider_price, provider_selling_price=:provider_selling_price, provider_last_balance=:provider_last_balance, provider_last_check_at=CURRENT_TIMESTAMP, provider_claim_id=NULL, provider_claimed_at=NULL, provider_claim_expires_at=NULL, provider_payload=:provider_payload, status_updated_at=CURRENT_TIMESTAMP WHERE id=:id AND provider_claim_id=:lease_id AND provider_claim_expires_at > CURRENT_TIMESTAMP AND payment_status='PAID' AND topup_status='PROCESSING' AND provider_outcome='SENT_UNKNOWN'", {"id": order_id, "lease_id": lease_id, "error": error_message, **values})
-            await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="FAILED", provider_status=status, provider_transaction_id=provider_id, provider_response=response, error_message=error_message)
             if updated:
+                await _finish_provider_attempt(order_id, attempt_number, request_state="COMPLETED", local_outcome="FAILED", provider_status=status, provider_transaction_id=provider_id, provider_response=response, error_message=error_message)
                 await release_order_promotions(order_id, include_redeemed=True)
+            else:
+                await _discard_stale_provider_attempt(order_id, attempt_number)
         except Exception as exc:
             error_type = type(exc).__name__
             safe_error = "Outcome provider tidak dapat dipastikan; rekonsiliasi diperlukan"
-            await _finish_provider_attempt(order_id, attempt_number, request_state="UNKNOWN", local_outcome="SENT_UNKNOWN", error_type=error_type, error_message=safe_error)
-            await db_execute(
+            updated = await db_execute_rowcount(
                 """
                 UPDATE topup
                 SET provider_outcome='SENT_UNKNOWN',
@@ -1182,6 +1225,10 @@ async def polling_status_engine() -> None:
                 """,
                 {"id": order_id, "lease_id": lease_id, "error": safe_error},
             )
+            if updated:
+                await _finish_provider_attempt(order_id, attempt_number, request_state="UNKNOWN", local_outcome="SENT_UNKNOWN", error_type=error_type, error_message=safe_error)
+            else:
+                await _discard_stale_provider_attempt(order_id, attempt_number)
             logging.error("Unknown outcome kirim_digiflazz order=%s error_type=%s", order_id, error_type)
 
     try:

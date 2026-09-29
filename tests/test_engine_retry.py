@@ -156,6 +156,39 @@ class EngineRetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rows[0][3], "SN-1")
         self.assertEqual(provider.await_count, 1)
 
+    async def test_stale_provider_reply_is_discarded_after_lease_is_lost(self) -> None:
+        async def callback_wins(*_args, **_kwargs):
+            await self.legacy_database.db_execute(
+                """
+                UPDATE topup
+                SET topup_status='SUCCESS',
+                    provider_outcome='SUCCESS',
+                    provider_claim_id=NULL,
+                    provider_claimed_at=NULL,
+                    provider_claim_expires_at=NULL
+                WHERE id='order-1'
+                """
+            )
+            return {"data": {"status": "Sukses", "rc": "00", "sn": "STALE-SN"}}
+
+        with patch("app.engine.kirim_digiflazz", new=AsyncMock(side_effect=callback_wins)):
+            await self.engine_module.polling_status_engine()
+
+        order_rows = await self.legacy_database.db_query(
+            "SELECT topup_status, provider_outcome, sn FROM topup WHERE id='order-1'"
+        )
+        self.assertEqual(order_rows[0], ("SUCCESS", "SUCCESS", None))
+        attempts = await self.legacy_database.db_query(
+            """
+            SELECT request_state, local_outcome, error_type
+            FROM provider_attempts
+            WHERE order_id='order-1'
+            ORDER BY attempt_number DESC
+            LIMIT 1
+            """
+        )
+        self.assertEqual(attempts[0], ("DISCARDED", "STALE_DISCARDED", "ProviderLeaseLost"))
+
     async def test_pending_provider_is_polled_without_second_send(self) -> None:
         pending_response = {"data": {"status": "Pending", "rc": "03", "message": "Transaksi Pending"}}
         send_provider = AsyncMock(return_value=pending_response)
