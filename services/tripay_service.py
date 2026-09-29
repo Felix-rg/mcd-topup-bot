@@ -1,4 +1,4 @@
-"""Shim re-export for services.tripay_service to app.services.tripay_service"""
+"""Compatibility shim re-exporting Tripay service from app.services."""
 
 from app.services.tripay_service import *  # noqa: F401,F403
 

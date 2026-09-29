@@ -1,14 +1,19 @@
+import asyncio
 import logging
-from typing import Any, Dict, Optional, cast
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Dict, Optional, cast
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.core.database import get_engine, init_db as init_core_db
+from app.core.database import get_engine, init_db as init_core_db, verify_database_connection
+from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
 engine = None
 _initialized = False
 _initialized_url: Optional[str] = None
+_initialization_lock: Optional[asyncio.Lock] = None
 
 
 def _current_engine():
@@ -18,24 +23,48 @@ def _current_engine():
 
 
 async def _ensure_db_ready() -> None:
-    global _initialized, _initialized_url
+    global _initialized, _initialized_url, _initialization_lock
     current_engine = _current_engine()
     current_url = str(current_engine.url)
 
     if _initialized and _initialized_url == current_url:
         return
 
-    try:
-        await init_core_db()
+    if _initialization_lock is None:
+        _initialization_lock = asyncio.Lock()
+    async with _initialization_lock:
+        current_engine = _current_engine()
+        current_url = str(current_engine.url)
+        if _initialized and _initialized_url == current_url:
+            return
+        if settings.allows_automatic_schema_bootstrap:
+            await init_core_db()
+        else:
+            await verify_database_connection()
         _initialized = True
         _initialized_url = current_url
-    except Exception as exc:
-        logger.warning("DB init warning: %s", exc)
 
 
-async def db_execute(query: str, params: Optional[Dict[str, Any]] = None) -> None:
+@asynccontextmanager
+async def db_transaction() -> AsyncIterator[AsyncConnection]:
+    """Yield one connection whose writes commit or roll back as a unit."""
+
+    await _ensure_db_ready()
+    async with _current_engine().begin() as connection:
+        yield connection
+
+
+async def db_execute(
+    query: str,
+    params: Optional[Dict[str, Any]] = None,
+    *,
+    connection: Optional[AsyncConnection] = None,
+) -> None:
     await _ensure_db_ready()
     try:
+        if connection is not None:
+            await connection.execute(text(query), params or {})
+            return
         async with _current_engine().begin() as conn:
             await conn.execute(text(query), params or {})
     except Exception:
@@ -43,8 +72,35 @@ async def db_execute(query: str, params: Optional[Dict[str, Any]] = None) -> Non
         raise
 
 
-async def db_query(query: str, params: Optional[Dict[str, Any]] = None) -> list[tuple[Any, ...]]:
+async def db_execute_rowcount(
+    query: str,
+    params: Optional[Dict[str, Any]] = None,
+    *,
+    connection: Optional[AsyncConnection] = None,
+) -> int:
     await _ensure_db_ready()
+    try:
+        if connection is not None:
+            result = await connection.execute(text(query), params or {})
+            return int(result.rowcount or 0)
+        async with _current_engine().begin() as conn:
+            result = await conn.execute(text(query), params or {})
+            return int(result.rowcount or 0)
+    except Exception:
+        logger.exception("DB Execute Error")
+        raise
+
+
+async def db_query(
+    query: str,
+    params: Optional[Dict[str, Any]] = None,
+    *,
+    connection: Optional[AsyncConnection] = None,
+) -> list[tuple[Any, ...]]:
+    await _ensure_db_ready()
+    if connection is not None:
+        result = await connection.execute(text(query), params or {})
+        return [tuple(row) for row in result.fetchall()]
     try:
         async with _current_engine().connect() as conn:
             result = await conn.execute(text(query), params or {})

@@ -1,4 +1,4 @@
-"""Shim re-export for routes.topup_routes to app.routes.topup_routes"""
+"""Compatibility shim re-exporting topup routes from app.routes.topup_routes."""
 
 from app.routes.topup_routes import *  # noqa: F401,F403
 

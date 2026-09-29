@@ -1,4 +1,4 @@
-"""Shim re-export for engine module to app.engine."""
+"""Compatibility shim re-exporting the background engine from app.engine."""
 
 from app.engine import *  # noqa: F401,F403
 

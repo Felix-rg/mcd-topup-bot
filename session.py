@@ -1,4 +1,4 @@
-"""Shim re-export for session module to app.session."""
+"""Compatibility shim re-exporting session helpers from app.session."""
 
 from app.session import *  # noqa: F401,F403
 

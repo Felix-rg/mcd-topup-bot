@@ -1,4 +1,4 @@
-"""Shim re-export for utils to app.utils."""
+"""Compatibility shim re-exporting helpers from app.utils."""
 
 from app.utils import *  # noqa: F401,F403
 

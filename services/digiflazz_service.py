@@ -1,4 +1,4 @@
-"""Shim re-export for services.digiflazz_service to app.services.digiflazz_service"""
+"""Compatibility shim re-exporting Digiflazz service from app.services."""
 
 from app.services.digiflazz_service import *  # noqa: F401,F403
 

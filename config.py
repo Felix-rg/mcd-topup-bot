@@ -1,4 +1,4 @@
-"""Shim for config re-exporting from app.config"""
+"""Compatibility shim re-exporting configuration from app.config."""
 
 from app.config import *  # noqa: F401,F403
 

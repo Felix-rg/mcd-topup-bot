@@ -1,4 +1,4 @@
-"""Shim re-export for routes.admin_router to app.routes.admin_router"""
+"""Compatibility shim re-exporting admin health router from app.routes.admin_router."""
 
 from app.routes.admin_router import *  # noqa: F401,F403
 
