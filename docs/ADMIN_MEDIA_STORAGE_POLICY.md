@@ -28,9 +28,9 @@ File yang berhasil diunggah dapat diakses melalui static URL publik. Jangan ungg
 
 ## 4. Git dan artefak rilis
 
-`.gitignore` mengecualikan `/web/uploads/admin/` agar upload baru tidak ikut commit secara tidak sengaja. Pada review ini ada 14 aset lama yang sudah terlacak Git di bawah direktori tersebut; aset tersebut tetap berada di riwayat/commit lokal sampai owner membuat keputusan eksplisit. Kebijakan ini tidak menghapus, memindahkan, atau menulis ulang aset tersebut.
+`.gitignore` mengecualikan `/web/uploads/admin/` agar upload baru tidak ikut commit secara tidak sengaja. Keputusan owner pada pre-push gate 2026-09-30: 14 aset lama yang sudah terlacak Git dipertahankan untuk kompatibilitas release ini. Kebijakan ini tidak menghapus, memindahkan, atau menulis ulang aset tersebut.
 
-Upload yang muncul di mesin kerja setelah aturan ignore dibuat adalah runtime data. Jangan memakai `git add .`; stage hanya file source/dokumen yang sudah ditinjau.
+Legacy tracked media retained for release compatibility; new runtime uploads are not version-controlled. Upload yang muncul di mesin kerja setelah aturan ignore dibuat adalah runtime data lokal. Jangan memakai `git add .`; stage hanya file source/dokumen yang sudah ditinjau.
 
 ## 5. Staging
 
@@ -61,6 +61,6 @@ Saat restore, pulihkan database dan media dari snapshot yang sama, lalu sampling
 
 - Tambahkan validasi MIME/decode gambar dan batas dimensi bila upload akan dibuka lebih luas.
 - Putuskan apakah permission upload dipisah untuk operator marketing/promo.
-- Putuskan nasib 14 aset admin lama yang masih terlacak Git sebelum push.
+- Rencanakan migrasi media legacy ke durable/object storage setelah staging stabil.
 - Tetapkan retensi, proses penghapusan terotorisasi, dan monitoring kapasitas storage.
 - Pastikan strategi backup/restore diuji di staging sebelum produksi.
