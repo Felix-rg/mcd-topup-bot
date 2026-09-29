@@ -2673,7 +2673,7 @@ async def topup(data: TopupRequest, request: Request) -> Any:
             expired_time=invoice_expired_unix or await _invoice_expired_time(),
             order_items=[{"name": product.get("name") or "LIXAFA PROJEK Top-up", "price": total_bayar, "quantity": 1}],
         )
-        
+
     except Exception as exc:
         logger.warning(
             "Pembuatan invoice Tripay prepaid belum pasti order=%s error_type=%s",
@@ -2864,11 +2864,11 @@ class NicknameRequest(BaseModel):
 @router.post("/check-nickname")
 async def api_check_nickname(req: NicknameRequest):
     nickname = await check_game_nickname(req.game_code, req.user_id, req.zone_id)
-    
+
     if not nickname:
         # Mengembalikan error 400 jika ID tidak valid
         raise HTTPException(status_code=400, detail="ID Game tidak ditemukan atau salah ketik.")
-    
+
     return {"status": "success", "nickname": nickname}
 
 
@@ -3680,7 +3680,7 @@ async def tripay_callback(request: Request):
             """,
             {"id": merchant_ref},
         )
-        
+
         if order:
             current_status = str(order[0][0] or "").upper()
             current_topup_status = str(order[0][1] or "").upper()

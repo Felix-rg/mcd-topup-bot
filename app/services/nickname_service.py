@@ -18,14 +18,14 @@ async def check_game_nickname(game_code: str, user_id: str, zone_id: str = "") -
         #     data = response.json()
         #     if data['status'] == 'success':
         #         return data['nickname']
-        
+
         # --- MODE SIMULASI UNTUK TESTING ---
         # Mengembalikan nama palsu agar alur checkout bisa dites
         simulated_nickname = f"Player_{user_id[:4]}***"
-        
+
         # Simulasi jika ID kependekan (salah ketik)
         if len(user_id) < 5:
-            return None 
+            return None
 
         return simulated_nickname
 

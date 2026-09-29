@@ -2734,7 +2734,7 @@ async function updateStatusRealtime() {
         const data = await res.json();
         const stage = (data.stage || "pending_payment").toLowerCase();
         
-        if (stage === "success") { 
+        if (stage === "success") {
             if (currentPopupStatus !== "success") {
                 Swal.fire({
                     title: 'Berhasil!',
