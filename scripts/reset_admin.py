@@ -2,7 +2,7 @@ import asyncio
 
 from app.database import db_execute, db_query, init_db
 from app.security import hash_password
-from core.settings import settings
+from app.core.settings import settings
 
 
 async def main() -> None:
@@ -35,7 +35,7 @@ async def main() -> None:
         
     print(f"✅ SUKSES! Akun Admin berhasil dikonfigurasi di PostgreSQL.")
     print(f"👉 Username: {username}")
-    print(f"👉 Password: {password_mentah}")
+    print("👉 Password tidak ditampilkan; gunakan nilai dari DEFAULT_ADMIN_PASSWORD yang Anda setel.")
 
 if __name__ == "__main__":
     asyncio.run(main())

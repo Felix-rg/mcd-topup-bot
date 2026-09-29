@@ -2,7 +2,7 @@
 import hashlib
 import hmac
 import requests
-from config import TRIPAY_API_KEY, TRIPAY_MERCHANT_CODE, TRIPAY_CALLBACK_URL, TRIPAY_BASE_URL, TRIPAY_PRIVATE_KEY
+from app.config import TRIPAY_API_KEY, TRIPAY_MERCHANT_CODE, TRIPAY_CALLBACK_URL, TRIPAY_BASE_URL, TRIPAY_PRIVATE_KEY
 
 def create_signature(order_id, amount):
     signature_str = TRIPAY_MERCHANT_CODE + order_id + str(amount)
@@ -44,7 +44,7 @@ def create_invoice(order_id, phone, provider, nominal, method, amount):
 
     print("===== TRIPAY RESPONSE =====")
     print("Status code:", response.status_code)
-    print("Response text:", response.text)
+    print("Response body disembunyikan agar data respons provider tidak tercetak ke terminal.")
     print("===========================")
 
     try:
