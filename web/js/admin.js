@@ -1,42 +1,53 @@
-async function login() {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value;
-    const msg = document.getElementById("msg");
-    const button = document.querySelector(".login-card button");
+async function loadLoginBranding() {
+    try {
+        const res = await fetch("/api/site-settings");
+        if (!res.ok) return;
+        const data = await res.json();
+        const title = document.getElementById("loginTitle");
+        const logo = document.getElementById("loginLogo");
+        const siteName = data.site_name || "LIXAFA";
+        if (title) title.innerText = `${siteName} Dashboard`;
+        if (logo && data.logo_url) {
+            logo.innerHTML = "";
+            logo.classList.add("has-image");
+            const img = document.createElement("img");
+            img.src = data.logo_url;
+            img.alt = siteName;
+            logo.appendChild(img);
+        } else if (logo) {
+            logo.classList.remove("has-image");
+            logo.innerText = "L";
+        }
+    } catch (error) {
+        console.error("Gagal memuat branding login:", error);
+    }
+}
 
-    if (!username || !password) {
-        msg.innerText = "Username dan password wajib diisi.";
+async function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const message = document.getElementById("msg");
+
+    const res = await fetch("/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    if (res.status !== 200) {
+        message.innerText = data.detail || "Login gagal";
         return;
     }
 
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
-    msg.innerText = "";
+    localStorage.setItem("admin_token", data.token);
+    localStorage.setItem("admin_user", JSON.stringify({
+        username: data.username,
+        role: data.role,
+        permissions: data.permissions || []
+    }));
 
-    try {
-        const response = await fetch("/admin/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ username, password }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            msg.innerText = data.detail || "Login gagal";
-            return;
-        }
-
-        localStorage.setItem("admin_token", data.token || data.access_token);
-        window.location.href = "/admin-dashboard";
-    } catch (error) {
-        console.error(error);
-        msg.innerText = "Server tidak merespons. Coba lagi.";
-    } finally {
-        button.disabled = false;
-        button.innerHTML = originalText;
-    }
+    window.location.href = "/admin-dashboard";
 }
+
+document.addEventListener("DOMContentLoaded", loadLoginBranding);

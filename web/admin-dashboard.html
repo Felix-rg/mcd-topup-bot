@@ -4,57 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - LIXAFA PROJEK</title>
+    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/web/css/admin.css">
+    <link rel="stylesheet" href="/web/css/admin.css?v=14">
 </head>
-<body class="admin-shell bg-light">
-    <nav class="navbar navbar-dark bg-dark d-md-none shadow-sm sticky-top">
+<body class="admin-body">
+    <nav class="navbar navbar-dark admin-topbar d-md-none sticky-top">
         <div class="container-fluid">
-            <span class="navbar-brand fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</span>
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
-                <span class="navbar-toggler-icon"></span>
+            <button class="admin-burger" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="Buka menu admin">
+                <i class="bi bi-list"></i>
             </button>
+            <span class="navbar-brand admin-brand admin-brand-mobile">
+                <span class="brand-mark" data-brand-logo>L</span>
+                <span class="admin-brand-copy">
+                    <span class="admin-brand-name" data-site-name>LIXAFA PROJEK</span>
+                    <span class="admin-role-label" data-admin-role-label>Admin</span>
+                </span>
+            </span>
         </div>
     </nav>
 
-    <div class="container-fluid">
+    <div class="container-fluid admin-shell">
         <div class="row">
-            <div class="col-md-2 sidebar shadow-lg px-3 d-none d-md-block">
-                <h4 class="text-center fw-bold mb-4 text-white"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</h4>
+            <div class="col-md-3 col-lg-2 sidebar px-3 d-none d-md-block">
+                <div class="admin-brand admin-brand-sidebar mb-4">
+                    <span class="brand-mark" data-brand-logo>L</span>
+                    <span class="admin-brand-copy">
+                        <span class="admin-brand-name" data-site-name>LIXAFA PROJEK</span>
+                        <span class="admin-role-label" data-admin-role-label>Admin</span>
+                    </span>
+                </div>
                 <hr class="border-secondary">
                 <div class="nav flex-column">
-                    <a class="nav-link" onclick="loadOrders()" id="nav-orders"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
-                    <a class="nav-link" onclick="loadProducts()" id="nav-products"><i class="bi bi-box-seam me-2"></i> Produk</a>
-                    <a class="nav-link" onclick="loadPromos()" id="nav-promos"><i class="bi bi-badge-ad me-2"></i> Promo</a>
+                    <a class="nav-link" data-permission="orders:view" onclick="loadOrders()" id="nav-orders"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
+                    <a class="nav-link" data-permission="finance:view" onclick="loadReports()" id="nav-reports"><i class="bi bi-bar-chart-line me-2"></i> Laporan</a>
+                    <a class="nav-link" data-permission="products:manage" onclick="loadProducts()" id="nav-products"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                    <a class="nav-link" data-permission="promos:manage" onclick="loadPromos()" id="nav-promos"><i class="bi bi-badge-ad me-2"></i> Promo</a>
+                    <a class="nav-link" data-permission="customers:manage" onclick="loadCustomers()" id="nav-customers"><i class="bi bi-person-lines-fill me-2"></i> Customer</a>
+                    <a class="nav-link" data-permission="admins:manage" onclick="loadAdmins()" id="nav-admins"><i class="bi bi-people me-2"></i> Akun Admin</a>
+                    <a class="nav-link" data-permission="content:manage" onclick="loadPages()" id="nav-pages"><i class="bi bi-file-richtext me-2"></i> Konten</a>
+                    <a class="nav-link" data-permission="settings:manage" onclick="loadSettings()" id="nav-settings"><i class="bi bi-sliders me-2"></i> Website</a>
+                    <a class="nav-link" data-permission="audit:view" onclick="loadAuditLogs()" id="nav-audit"><i class="bi bi-shield-check me-2"></i> Audit</a>
+                    <a class="nav-link" data-permission="api:monitor" onclick="loadApiMonitor()" id="nav-api-monitor"><i class="bi bi-diagram-3 me-2"></i> API Transaksi</a>
                 </div>
                 <hr class="border-secondary mt-5">
                 <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Logout</button>
             </div>
 
-            <div class="offcanvas offcanvas-start bg-dark text-white d-md-none" tabindex="-1" id="mobileSidebar" style="width: 280px;">
+            <div class="offcanvas offcanvas-start admin-mobile-sidebar text-white d-md-none" tabindex="-1" id="mobileSidebar">
                 <div class="offcanvas-header border-bottom border-secondary">
-                    <h5 class="offcanvas-title fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> LIXAFA Admin</h5>
+                    <div class="offcanvas-title admin-brand admin-brand-offcanvas">
+                        <span class="brand-mark" data-brand-logo>L</span>
+                        <span class="admin-brand-copy">
+                            <span class="admin-brand-name" data-site-name>LIXAFA PROJEK</span>
+                            <span class="admin-role-label" data-admin-role-label>Admin</span>
+                        </span>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
                 </div>
                 <div class="offcanvas-body">
                     <div class="nav flex-column">
-                        <a class="nav-link text-white mb-2" onclick="loadOrders()" data-bs-dismiss="offcanvas"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
-                        <a class="nav-link text-white mb-2" onclick="loadProducts()" data-bs-dismiss="offcanvas"><i class="bi bi-box-seam me-2"></i> Produk</a>
-                        <a class="nav-link text-white mb-2" onclick="loadPromos()" data-bs-dismiss="offcanvas"><i class="bi bi-badge-ad me-2"></i> Promo</a>
+                        <a class="nav-link text-white mb-2" data-permission="orders:view" onclick="loadOrders()" data-bs-dismiss="offcanvas"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
+                        <a class="nav-link text-white mb-2" data-permission="finance:view" onclick="loadReports()" data-bs-dismiss="offcanvas"><i class="bi bi-bar-chart-line me-2"></i> Laporan</a>
+                        <a class="nav-link text-white mb-2" data-permission="products:manage" onclick="loadProducts()" data-bs-dismiss="offcanvas"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                        <a class="nav-link text-white mb-2" data-permission="promos:manage" onclick="loadPromos()" data-bs-dismiss="offcanvas"><i class="bi bi-badge-ad me-2"></i> Promo</a>
+                        <a class="nav-link text-white mb-2" data-permission="customers:manage" onclick="loadCustomers()" data-bs-dismiss="offcanvas"><i class="bi bi-person-lines-fill me-2"></i> Customer</a>
+                        <a class="nav-link text-white mb-2" data-permission="admins:manage" onclick="loadAdmins()" data-bs-dismiss="offcanvas"><i class="bi bi-people me-2"></i> Akun Admin</a>
+                        <a class="nav-link text-white mb-2" data-permission="content:manage" onclick="loadPages()" data-bs-dismiss="offcanvas"><i class="bi bi-file-richtext me-2"></i> Konten</a>
+                        <a class="nav-link text-white mb-2" data-permission="settings:manage" onclick="loadSettings()" data-bs-dismiss="offcanvas"><i class="bi bi-sliders me-2"></i> Website</a>
+                        <a class="nav-link text-white mb-2" data-permission="audit:view" onclick="loadAuditLogs()" data-bs-dismiss="offcanvas"><i class="bi bi-shield-check me-2"></i> Audit</a>
+                        <a class="nav-link text-white mb-2" data-permission="api:monitor" onclick="loadApiMonitor()" data-bs-dismiss="offcanvas"><i class="bi bi-diagram-3 me-2"></i> API Transaksi</a>
                         <hr class="border-secondary">
                         <a class="nav-link text-danger" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-10 p-4" id="main-content">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="fw-bold m-0" id="page-title" style="font-size: 1.2rem;">Dashboard</h3>
-                    <button class="btn btn-sm btn-danger d-md-none" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
+            <div class="col-md-9 col-lg-10 admin-main" id="main-content">
+                <div class="admin-page-head">
+                    <div>
+                        <div class="admin-page-kicker">LIXAFA Admin</div>
+                        <h3 class="fw-bold m-0" id="page-title">Dashboard</h3>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-2" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
                 </div>
 
-                <div class="row mb-4">
+                <!-- Statistik Card -->
+                <div class="row mb-4" id="stats_cards" data-permission="orders:view">
                     <div class="col-6 col-md-3 mb-3">
                         <div class="card stat-card shadow-sm p-3">
                             <p class="text-muted mb-1 fw-semibold"><i class="bi bi-graph-up-arrow me-1"></i> Revenue Hari Ini</p>
@@ -79,8 +117,33 @@
                             <h4 class="fw-bold text-primary" id="profit_total">Rp 0</h4>
                         </div>
                     </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="card stat-card shadow-sm p-3">
+                            <p class="text-muted mb-1 fw-semibold"><i class="bi bi-hourglass-split me-1"></i> Menunggu Bayar</p>
+                            <h4 class="fw-bold text-dark" id="waiting_payment">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="card stat-card shadow-sm p-3">
+                            <p class="text-muted mb-1 fw-semibold"><i class="bi bi-truck me-1"></i> Pending Provider</p>
+                            <h4 class="fw-bold text-dark" id="pending_provider">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="card stat-card shadow-sm p-3">
+                            <p class="text-muted mb-1 fw-semibold"><i class="bi bi-headset me-1"></i> Ticket Terbuka</p>
+                            <h4 class="fw-bold text-dark" id="open_tickets">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3">
+                        <div class="card stat-card shadow-sm p-3">
+                            <p class="text-muted mb-1 fw-semibold"><i class="bi bi-wallet2 me-1"></i> Liability Wallet</p>
+                            <h4 class="fw-bold text-dark" id="wallet_liability">Rp 0</h4>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Tombol Tambah Produk (Akan disembunyikan pakai JS kalau di menu Transaksi) -->
                 <div id="product_actions" class="mb-3 text-end" style="display: none;">
                     <button id="btnSync" class="btn btn-success shadow-sm me-2">
                         <i class="bi bi-arrow-repeat"></i> Tarik Data Digiflazz
@@ -99,46 +162,246 @@
                     </button>
                 </div>
 
-                <div class="row mb-3">
+                <div id="admin_actions" class="mb-3 text-end" style="display: none;">
+                    <button class="btn btn-primary shadow-sm" onclick="showAddAdminModal()">
+                        <i class="bi bi-person-plus"></i> Tambah Admin
+                    </button>
+                </div>
+
+                <div id="page_actions" class="mb-3 text-end" style="display: none;">
+                    <button class="btn btn-primary shadow-sm" onclick="showAddPageModal()">
+                        <i class="bi bi-plus-lg"></i> Tambah Konten
+                    </button>
+                </div>
+
+                <div class="row mb-3 admin-search-row">
                     <div class="col-md-4">
                         <div class="input-group shadow-sm">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cari No. HP atau SKU..." onkeyup="filterTable()">
+                            <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cari No. HP, SKU, atau data..." onkeyup="filterTable()">
                         </div>
                     </div>
                 </div>
 
+                <!-- Tabel -->
                 <div id="category_nav" class="mb-3" style="display: none;">
-                    <ul class="nav nav-pills bg-white p-2 rounded-pill shadow-sm d-inline-flex"></ul>
+                    <ul class="nav nav-pills bg-white p-2 rounded-pill shadow-sm d-inline-flex">
+                    </ul>
                 </div>
 
-                <div id="product_container" style="display: none;"></div>
+                <div id="product_container" style="display: none;">
+                    </div>
 
                 <div id="promo_container" style="display: none;">
                     <div class="table-custom p-3">
+                        <div class="promo-list-toolbar" aria-label="Filter daftar promo">
+                            <div class="promo-list-search">
+                                <label class="form-label" for="promo_search">Cari promo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                                    <input type="search" id="promo_search" class="form-control" placeholder="Nama, kode, target, atau metode..." autocomplete="off">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="form-label" for="promo_filter_status">Status</label>
+                                <select id="promo_filter_status" class="form-select">
+                                    <option value="">Semua status</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="scheduled">Dijadwalkan</option>
+                                    <option value="live">Aktif</option>
+                                    <option value="paused">Dijeda</option>
+                                    <option value="quota_exhausted">Kuota habis</option>
+                                    <option value="expired">Berakhir</option>
+                                    <option value="disabled">Dinonaktifkan</option>
+                                    <option value="archived">Diarsipkan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="promo_filter_type">Jenis</label>
+                                <select id="promo_filter_type" class="form-select">
+                                    <option value="">Semua jenis</option>
+                                    <option value="banner">Konten banner</option>
+                                    <option value="automatic">Diskon otomatis</option>
+                                    <option value="voucher">Kode voucher</option>
+                                    <option value="special_price">Harga khusus</option>
+                                    <option value="payment_method">Metode pembayaran</option>
+                                    <option value="price">Diskon harga (legacy)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="promo_filter_scope">Cakupan</label>
+                                <select id="promo_filter_scope" class="form-select">
+                                    <option value="">Semua cakupan</option>
+                                    <option value="all">Semua produk</option>
+                                    <option value="category">Kategori</option>
+                                    <option value="provider">Game/provider</option>
+                                    <option value="sku">SKU/produk</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="promo_sort">Urutkan</label>
+                                <select id="promo_sort" class="form-select">
+                                    <option value="updated_desc">Terakhir diperbarui</option>
+                                    <option value="updated_asc">Pembaruan terlama</option>
+                                    <option value="title_asc">Nama A-Z</option>
+                                    <option value="title_desc">Nama Z-A</option>
+                                    <option value="priority_desc">Prioritas tertinggi</option>
+                                    <option value="usage_desc">Pemakaian terbanyak</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="promo_page_size">Per halaman</label>
+                                <select id="promo_page_size" class="form-select">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div id="promo_result_summary" class="small text-muted" aria-live="polite">Memuat promo...</div>
+                            <button type="button" id="promo_reset_filters" class="btn btn-sm btn-outline-secondary">Reset filter</button>
+                        </div>
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 promo-management-table">
+                                <caption class="visually-hidden">Daftar promo dan tindakan pengelolaannya</caption>
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Judul</th>
-                                        <th>Badge</th>
+                                        <th>Promo</th>
+                                        <th>Jenis & Cakupan</th>
+                                        <th>Periode</th>
+                                        <th>Pemakaian</th>
+                                        <th>Total Diskon</th>
                                         <th>Status</th>
                                         <th>Website</th>
-                                        <th>Periode</th>
-                                        <th>Deskripsi</th>
-                                        <th class="text-end">Aksi</th>
+                                        <th>Diperbarui</th>
+                                        <th class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="promo_table_body"></tbody>
                             </table>
                         </div>
+                        <div class="promo-pagination" aria-label="Navigasi halaman promo">
+                            <button type="button" id="promo_page_prev" class="btn btn-sm btn-outline-secondary">Sebelumnya</button>
+                            <span id="promo_page_label" class="small text-muted" aria-live="polite">Halaman 1</span>
+                            <button type="button" id="promo_page_next" class="btn btn-sm btn-outline-secondary">Berikutnya</button>
+                        </div>
                     </div>
                 </div>
 
-                <div id="order_container">
+                <div id="admin_container" style="display: none;">
                     <div class="table-custom p-3">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="main_table"></table>
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr><th>Username</th><th>Kelas</th><th>Hak Akses</th><th>Status</th><th class="text-center">Aksi</th></tr>
+                                </thead>
+                                <tbody id="admin_table_body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page_container" style="display: none;">
+                    <div class="table-custom p-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr><th>Halaman</th><th>Slug</th><th>Preview</th><th>Status</th><th class="text-center">Aksi</th></tr>
+                                </thead>
+                                <tbody id="page_table_body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settings_container" style="display: none;">
+                    <div class="dashboard-panel p-4">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Nama Website</label>
+                                <input type="text" id="site_name_input" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Logo URL</label>
+                                <input type="text" id="site_logo_url_input" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Upload Logo</label>
+                                <input type="file" id="site_logo_file_input" class="form-control" accept="image/*,.svg">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Footer Text</label>
+                                <input type="text" id="site_footer_text_input" class="form-control">
+                            </div>
+                        </div>
+                        <button class="btn btn-gold px-4" onclick="saveSiteSettings()">Simpan Website</button>
+                    </div>
+                </div>
+
+                <div id="report_container" style="display: none;">
+                    <div id="report_content"></div>
+                </div>
+
+                <div id="customer_container" style="display: none;">
+                    <div id="customer_content"></div>
+                </div>
+
+                <div id="audit_container" style="display: none;">
+                    <div id="audit_content"></div>
+                </div>
+
+                <div id="api_monitor_container" style="display: none;">
+                    <div class="dashboard-panel p-4" id="api_monitor_content"></div>
+                </div>
+
+                <div id="order_container">
+                    <div class="dashboard-panel p-3 mb-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small">Payment</label>
+                                <select id="order_filter_payment" class="form-select">
+                                    <option value="">Semua</option>
+                                    <option value="UNPAID">UNPAID</option>
+                                    <option value="PAID">PAID</option>
+                                    <option value="REFUNDED">REFUNDED</option>
+                                    <option value="EXPIRED">EXPIRED</option>
+                                    <option value="CANCELED">CANCELED</option>
+                                    <option value="FAILED">FAILED</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small">Topup</label>
+                                <select id="order_filter_topup" class="form-select">
+                                    <option value="">Semua</option>
+                                    <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
+                                    <option value="PROCESSING">PROCESSING</option>
+                                    <option value="PENDING_PROVIDER">PENDING_PROVIDER</option>
+                                    <option value="SUCCESS">SUCCESS</option>
+                                    <option value="FAILED">FAILED</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small">Dari</label>
+                                <input type="date" id="order_filter_from" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small">Sampai</label>
+                                <input type="date" id="order_filter_to" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small">Limit</label>
+                                <input type="number" id="order_filter_limit" class="form-control" value="150" min="1" max="500">
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button class="btn btn-primary" onclick="loadOrders()"><i class="bi bi-funnel"></i> Filter</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-custom p-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="main_table">
+                                </table>
                         </div>
                     </div>
                 </div>
@@ -146,41 +409,52 @@
         </div>
     </div>
 
+    <!-- MODAL DETAIL ORDER -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Detail Transaksi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup detail transaksi"></button>
+                </div>
+                <div class="modal-body" id="order_detail_content">
+                    <div class="text-center p-4">Memuat detail order...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH PRODUK -->
     <div class="modal fade" id="addProductModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Tambah Produk Baru</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Provider</label><input type="text" id="add_provider" class="form-control" placeholder="Contoh: telkomsel"></div>
-                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="add_category" class="form-control" placeholder="Contoh: Mobile Legends"></div>
-                    </div>
+                    <div class="mb-2"><label>Provider</label><input type="text" id="add_provider" class="form-control" placeholder="Contoh: telkomsel"></div>
                     <div class="mb-2"><label>Nama Produk</label><input type="text" id="add_name" class="form-control" placeholder="Contoh: Telkomsel 10K"></div>
                     <div class="mb-2"><label>SKU Digiflazz</label><input type="text" id="add_sku" class="form-control" placeholder="Contoh: s10"></div>
-                    <div class="row g-2">
+                    <div class="row">
                         <div class="col-md-6 mb-2"><label>Harga Modal (Cost)</label><input type="number" id="add_cost" class="form-control"></div>
                         <div class="col-md-6 mb-2"><label>Harga Jual (Price)</label><input type="number" id="add_price" class="form-control"></div>
                     </div>
-                    <div class="mb-2"><label>Deskripsi</label><textarea id="add_description" class="form-control" rows="2"></textarea></div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Logo URL</label><input type="text" id="add_logo_url" class="form-control" placeholder="/web/uploads/... or https://..."></div>
-                        <div class="col-md-6 mb-2"><label>Upload Logo</label><input type="file" id="add_logo_file" class="form-control" accept="image/*"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="add_category" class="form-control" placeholder="Game, Pulsa, Voucher"></div>
+                        <div class="col-md-6 mb-2"><label>Urutan Tampil</label><input type="number" id="add_display_order" class="form-control" value="0" min="0"></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="add_image_url" class="form-control" placeholder="/web/uploads/... or https://..."></div>
-                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="add_image_file" class="form-control" accept="image/*"></div>
+                    <div class="mb-2"><label>Deskripsi Provider</label><input type="text" id="add_description" class="form-control" placeholder="Contoh: Proses otomatis 24 jam"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Logo URL</label><input type="text" id="add_logo_url" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Banner/Image URL</label><input type="text" id="add_image_url" class="form-control"></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-4 mb-2"><label>Promo Title</label><input type="text" id="add_promo_title" class="form-control"></div>
-                        <div class="col-md-4 mb-2"><label>Promo Badge</label><input type="text" id="add_promo_badge" class="form-control"></div>
-                        <div class="col-md-4 mb-2"><label>Display Order</label><input type="number" id="add_display_order" class="form-control" value="0"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label>Badge</label><input type="text" id="add_promo_badge" class="form-control" placeholder="Hot, Promo"></div>
+                        <div class="col-md-4 mb-2"><label>Judul Promo</label><input type="text" id="add_promo_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>URL Promo</label><input type="text" id="add_promo_url" class="form-control"></div>
                     </div>
-                    <div class="mb-2"><label>Promo Text</label><textarea id="add_promo_text" class="form-control" rows="2"></textarea></div>
-                    <div class="mb-2"><label>Promo URL</label><input type="text" id="add_promo_url" class="form-control"></div>
-                    <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="add_active" checked><label class="form-check-label" for="add_active">Aktif</label></div>
+                    <div class="mb-2"><label>Teks Promo</label><input type="text" id="add_promo_text" class="form-control"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -190,126 +464,287 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT PRODUK -->
     <div class="modal fade" id="editProductModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title">Edit Produk</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">Edit Harga Produk</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup form produk"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_id">
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Provider</label><input type="text" id="edit_provider" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="edit_category" class="form-control"></div>
-                    </div>
+                    <div class="mb-2"><label>Provider</label><input type="text" id="edit_provider" class="form-control"></div>
                     <div class="mb-2"><label>Nama Produk</label><input type="text" id="edit_name" class="form-control"></div>
-                    <div class="row g-2">
+                    <div class="row">
                         <div class="col-md-6 mb-2"><label>Harga Modal (Cost)</label><input type="number" id="edit_cost" class="form-control"></div>
                         <div class="col-md-6 mb-2"><label>Harga Jual (Price)</label><input type="number" id="edit_price" class="form-control"></div>
                     </div>
-                    <div class="mb-2"><label>Deskripsi</label><textarea id="edit_description" class="form-control" rows="2"></textarea></div>
-                    <div class="row g-2">
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kategori</label><input type="text" id="edit_category" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Urutan Tampil</label><input type="number" id="edit_display_order" class="form-control" min="0"></div>
+                    </div>
+                    <div class="mb-2"><label>Deskripsi Provider</label><input type="text" id="edit_description" class="form-control"></div>
+                    <div class="row">
                         <div class="col-md-6 mb-2"><label>Logo URL</label><input type="text" id="edit_logo_url" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Upload Logo</label><input type="file" id="edit_logo_file" class="form-control" accept="image/*"></div>
+                        <div class="col-md-6 mb-2"><label>Banner/Image URL</label><input type="text" id="edit_image_url" class="form-control"></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="edit_image_url" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="edit_image_file" class="form-control" accept="image/*"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label for="edit_product_promo_badge">Badge</label><input type="text" id="edit_product_promo_badge" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label for="edit_product_promo_title">Judul Promo</label><input type="text" id="edit_product_promo_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>URL Promo</label><input type="text" id="edit_promo_url" class="form-control"></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-4 mb-2"><label>Promo Title</label><input type="text" id="edit_promo_title" class="form-control"></div>
-                        <div class="col-md-4 mb-2"><label>Promo Badge</label><input type="text" id="edit_promo_badge" class="form-control"></div>
-                        <div class="col-md-4 mb-2"><label>Display Order</label><input type="number" id="edit_display_order" class="form-control" value="0"></div>
-                    </div>
-                    <div class="mb-2"><label>Promo Text</label><textarea id="edit_promo_text" class="form-control" rows="2"></textarea></div>
-                    <div class="mb-2"><label>Promo URL</label><input type="text" id="edit_promo_url" class="form-control"></div>
-                    <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="edit_active"><label class="form-check-label" for="edit_active">Aktif</label></div>
+                    <div class="mb-2"><label>Teks Promo</label><input type="text" id="edit_promo_text" class="form-control"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary w-100" onclick="saveEditProduct()">Update Produk</button>
+                    <button type="button" class="btn btn-primary w-100" onclick="saveEditProduct()">Update Harga</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="bulkMarkupModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-tags"></i> Set Profit Massal</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold"><i class="bi bi-tags"></i> Set Profit Massal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small">
+                    Fitur ini akan mereset harga jual menjadi: <br>
+                    <b>Harga Modal + (Harga Modal × Persen Profit)</b>.
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info small">
-                        Fitur ini akan mereset harga jual menjadi: <br>
-                        <b>Harga Modal + (Harga Modal × Persen Profit)</b>.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Pilih Kategori / Provider</label>
-                        <select id="bulk_brand" class="form-select"><option value="">Memuat list provider...</option></select>
-                    </div>
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <label class="form-label fw-bold small">Profit (%)</label>
-                            <div class="input-group">
-                                <input type="number" id="bulk_percent" class="form-control" placeholder="Contoh: 5" min="1">
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label fw-bold small">Minimal Cuan (Rp)</label>
-                            <input type="number" id="bulk_min_profit" class="form-control" placeholder="Contoh: 1000" value="1000">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Pilih Kategori / Provider</label>
+                    <select id="bulk_brand" class="form-select">
+                        <option value="">Memuat list provider...</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold small">Profit (%)</label>
+                        <div class="input-group">
+                            <input type="number" id="bulk_percent" class="form-control" placeholder="Contoh: 5" min="1">
+                            <span class="input-group-text">%</span>
                         </div>
                     </div>
-                    <small class="text-muted d-block mt-1">Jika hasil persen lebih kecil dari Minimal Cuan, maka sistem otomatis mengambil nilai Minimal Cuan.</small>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold small">Minimal Cuan (Rp)</label>
+                        <input type="number" id="bulk_min_profit" class="form-control" placeholder="Contoh: 1000" value="1000">
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-warning fw-bold" onclick="saveBulkMarkup()">Simpan Massal</button>
-                </div>
+                <small class="text-muted d-block mt-1">Jika hasil persen lebih kecil dari Minimal Cuan, maka sistem otomatis mengambil nilai Minimal Cuan.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-warning fw-bold" onclick="saveBulkMarkup()">Simpan Massal</button>
             </div>
         </div>
     </div>
+</div>
 
+    <!-- MODAL TAMBAH PROMO -->
     <div class="modal fade" id="addPromoModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Tambah Promo Baru</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup form promo"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-2"><label>Judul</label><input type="text" id="promo_title" class="form-control"></div>
-                    <div class="mb-2"><label>Kode Promo</label><input type="text" id="promo_code" class="form-control"></div>
-                    <div class="mb-2"><label>Badge</label><input type="text" id="promo_badge" class="form-control"></div>
-                    <div class="mb-2"><label>Deskripsi</label><textarea id="promo_description" class="form-control" rows="3"></textarea></div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Tipe Promo</label><select id="promo_rule_type" class="form-select"><option value="content">Konten Saja</option><option value="price">Diskon Harga</option></select></div>
-                        <div class="col-md-6 mb-2"><label>Cakupan</label><select id="promo_target_scope" class="form-select"><option value="all">Semua Produk</option><option value="category">Kategori</option><option value="provider">Provider</option><option value="sku">SKU Spesifik</option></select></div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-bold">Judul</label>
+                            <input type="text" id="promo_title" class="form-control" placeholder="Contoh: Gratis Diamond Free Fire">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Kode Promo</label>
+                            <input type="text" id="promo_code" class="form-control" placeholder="Opsional, contoh: FFGRATIS">
+                            <small class="text-muted">Isi kode kalau promo harus diketik user saat checkout.</small>
+                        </div>
                     </div>
-                    <small class="text-muted d-block mb-2">Untuk harga coret, pilih Tipe Promo = Diskon Harga. Jika Kode Promo diisi, diskon berlaku setelah user menekan Apply kode.</small>
-                    <div class="mb-2"><label>Target Value (opsional)</label><input type="text" id="promo_target_value" class="form-control" placeholder="Contoh: mobile legend, free fire, ml_10k"></div>
-                    <small class="text-muted d-block mb-2">Judul promo boleh sama. Untuk beberapa target, pisahkan dengan koma.</small>
-                    <div class="row g-2">
-                        <div class="col-md-4 mb-2"><label>Jenis Diskon</label><select id="promo_discount_type" class="form-select"><option value="">-</option><option value="percent">Persen</option><option value="fixed">Nominal</option></select></div>
-                        <div class="col-md-4 mb-2"><label>Nilai Diskon</label><input type="number" id="promo_discount_value" class="form-control" min="0" step="0.01"></div>
-                        <div class="col-md-4 mb-2"><label>Maks Diskon</label><input type="number" id="promo_max_discount" class="form-control" min="0" step="0.01"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Badge</label>
+                            <input type="text" id="promo_badge" class="form-control" placeholder="Hot, Gratis, DANA Only">
+                            <small class="text-muted">Label pendek yang tampil di kartu promo.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Tipe Promo</label>
+                            <select id="promo_rule_type" class="form-select">
+                                <option value="content">Konten Banner</option>
+                                <option value="price">Diskon Harga</option>
+                            </select>
+                            <small class="text-muted">Diskon Harga memotong harga checkout. Konten Banner hanya tampil sebagai informasi.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Cakupan Produk</label>
+                            <select id="promo_target_scope" class="form-select promo-target-scope">
+                                <option value="all">Semua produk</option>
+                                <option value="category">Kategori</option>
+                                <option value="provider">Provider/Game</option>
+                                <option value="sku">Produk/SKU tertentu</option>
+                            </select>
+                            <small class="text-muted">Pilih siapa yang boleh memakai promo ini.</small>
+                        </div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>CTA Text</label><input type="text" id="promo_cta_text" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>CTA URL</label><input type="text" id="promo_cta_url" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Target</label>
+                            <select id="promo_target_value" class="form-select promo-target-value"></select>
+                            <small class="text-muted">Opsinya otomatis dari database produk agar tidak salah ketik.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Metode Pembayaran</label>
+                            <div class="border rounded-3 p-2">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <small class="text-muted">Centang metode khusus. Tidak ada centang = semua metode.</small>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPromoPaymentMethods('promo')">Semua Metode</button>
+                                </div>
+                                <input type="search" id="promo_payment_method_search" class="form-control form-control-sm mb-2" placeholder="Cari QRIS, DANA, BCA..." oninput="filterPromoPaymentMethods('promo')">
+                                <div id="promo_payment_methods" class="promo-method-grid"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="promo_image_url" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="promo_image_file" class="form-control" accept="image/*"></div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <label class="form-label fw-bold mb-1">Deskripsi</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="autofillPromoDescription('promo')">Isi Otomatis</button>
+                        </div>
+                        <textarea id="promo_description" class="form-control" rows="2" placeholder="Jelaskan benefit promo dengan bahasa sederhana."></textarea>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Starts At</label><input type="datetime-local" id="promo_starts_at" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Ends At</label><input type="datetime-local" id="promo_ends_at" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Jenis Diskon</label>
+                            <select id="promo_discount_type" class="form-select">
+                                <option value="">Tidak ada</option>
+                                <option value="percent">Persen (%)</option>
+                                <option value="fixed">Nominal rupiah</option>
+                            </select>
+                            <small class="text-muted">Pakai persen untuk 10%, 50%, 100%. Pakai nominal untuk potongan tetap.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Nilai Diskon</label>
+                            <input type="number" id="promo_discount_value" class="form-control" min="0" placeholder="Contoh: 10 atau 5000">
+                            <small class="text-muted">Jika jenis Persen, isi 10 untuk 10%. Jika Nominal, isi 5000.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Maks Diskon</label>
+                            <input type="number" id="promo_max_discount" class="form-control" min="0" placeholder="0 = tanpa batas">
+                            <small class="text-muted">Pengaman boncos untuk diskon persen. Contoh: diskon 50% maksimal Rp10.000.</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Maksimal Penggunaan</label>
+                            <select id="promo_usage_mode" class="form-select">
+                                <option value="unlimited">Tidak dibatasi</option>
+                                <option value="limited">Batasi jumlah pemakaian</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Jumlah Maksimal</label>
+                            <input type="number" id="promo_usage_limit" class="form-control" min="0" placeholder="Contoh: 100" disabled>
+                            <small class="text-muted">Wajib pakai kode promo jika ingin membatasi pemakaian.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Arahkan Tombol ke</label>
+                            <select id="promo_cta_preset" class="form-select">
+                                <option value="products">Section produk</option>
+                                <option value="target">Target promo terpilih</option>
+                                <option value="latest">Halaman daftar promo</option>
+                                <option value="custom">URL manual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Budget Subsidi</label>
+                            <input type="number" id="promo_budget_limit" class="form-control" min="0" placeholder="0 = tanpa budget">
+                            <small class="text-muted">Total maksimal diskon yang boleh keluar dari promo ini.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Limit per Akun</label>
+                            <input type="number" id="promo_max_per_customer" class="form-control" min="0" placeholder="0 = tanpa batas">
+                            <small class="text-muted">Untuk customer yang login.</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Limit per Nomor WA</label>
+                            <input type="number" id="promo_max_per_phone" class="form-control" min="0" placeholder="0 = tanpa batas">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Limit per Target ID</label>
+                            <input type="number" id="promo_max_per_target" class="form-control" min="0" placeholder="0 = tanpa batas">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Gabung Promo</label>
+                            <select id="promo_stackable" class="form-select">
+                                <option value="1">Boleh digabung</option>
+                                <option value="0">Tidak boleh digabung</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Prioritas</label>
+                            <input type="number" id="promo_priority" class="form-control" min="0" placeholder="0">
+                            <small class="text-muted">Angka lebih besar didahulukan saat diskon sama.</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label fw-bold">CTA Text</label><input type="text" id="promo_cta_text" class="form-control" placeholder="Lihat Promo"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label fw-bold">CTA URL</label><input type="text" id="promo_cta_url" class="form-control" placeholder="#produk-section, game:Free Fire, /promo/latest"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gambar Promo</label>
+                        <div class="input-group">
+                            <input type="text" id="promo_image_url" class="form-control" placeholder="URL akan terisi setelah upload">
+                            <button class="btn btn-outline-secondary" type="button" onclick="pickPromoImage('promo')">Upload</button>
+                        </div>
+                        <input type="file" id="promo_image_file" class="d-none" accept="image/*">
+                    </div>
+                    <div class="border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <div>
+                                <label class="form-label fw-bold mb-0">Simulasi Promo</label>
+                                <small class="text-muted d-block">Cek hasil promo sebelum disimpan.</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="simulatePromo('promo')">Cek Simulasi</button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-7 mb-2"><select id="promo_simulation_sku" class="form-select"></select></div>
+                            <div class="col-md-5 mb-2"><select id="promo_simulation_method" class="form-select"></select></div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label small" for="promo_simulation_identity_mode">Status login</label>
+                                <select id="promo_simulation_identity_mode" class="form-select">
+                                    <option value="guest">Guest (tanpa login)</option>
+                                    <option value="member">Member terdaftar</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8" data-promo-simulation-account hidden>
+                                <label class="form-label small" for="promo_simulation_customer_id">Akun member</label>
+                                <select id="promo_simulation_customer_id" class="form-select"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" for="promo_simulation_customer_phone">Nomor WhatsApp identitas</label>
+                                <input type="tel" id="promo_simulation_customer_phone" class="form-control" autocomplete="off" placeholder="08xxxxxxxxxx atau +628xxxxxxxxxx">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" for="promo_simulation_target_id">Target transaksi</label>
+                                <input type="text" id="promo_simulation_target_id" class="form-control" autocomplete="off" placeholder="ID game/tujuan (opsional)">
+                            </div>
+                            <div class="col-12 form-text" id="promo_simulation_identity_help">Histori transaksi ditentukan backend dari identitas ini dan tidak dapat dipilih manual.</div>
+                        </div>
+                        <div id="promo_simulation_result" class="small text-muted"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Mulai</label><input type="datetime-local" id="promo_starts_at" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Berakhir</label><input type="datetime-local" id="promo_ends_at" class="form-control"></div>
                     </div>
                     <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="promo_show_on_website" checked><label class="form-check-label" for="promo_show_on_website">Tampilkan di website</label></div>
                     <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="promo_active" checked><label class="form-check-label" for="promo_active">Aktif</label></div>
+                    <small class="text-muted d-block mt-2">Contoh: promo Free Fire khusus DANA = Cakupan Provider/Game Free Fire, Metode Pembayaran DANA, Tipe Diskon Harga.</small>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -319,42 +754,115 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT PROMO -->
     <div class="modal fade" id="editPromoModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
                     <h5 class="modal-title">Edit Promo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup form promo"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_promo_id">
-                    <div class="mb-2"><label>Judul</label><input type="text" id="edit_promo_title" class="form-control"></div>
-                    <div class="mb-2"><label>Kode Promo</label><input type="text" id="edit_promo_code" class="form-control"></div>
-                    <div class="mb-2"><label>Badge</label><input type="text" id="edit_promo_badge" class="form-control"></div>
-                    <div class="mb-2"><label>Deskripsi</label><textarea id="edit_promo_description" class="form-control" rows="3"></textarea></div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Tipe Promo</label><select id="edit_promo_rule_type" class="form-select"><option value="content">Konten Saja</option><option value="price">Diskon Harga</option></select></div>
-                        <div class="col-md-6 mb-2"><label>Cakupan</label><select id="edit_promo_target_scope" class="form-select"><option value="all">Semua Produk</option><option value="category">Kategori</option><option value="provider">Provider</option><option value="sku">SKU Spesifik</option></select></div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3"><label class="form-label fw-bold">Judul</label><input type="text" id="edit_promo_title" class="form-control"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Kode Promo</label><input type="text" id="edit_promo_code" class="form-control"><small class="text-muted">Isi kode jika user wajib mengetik voucher.</small></div>
                     </div>
-                    <small class="text-muted d-block mb-2">Untuk harga coret, pilih Tipe Promo = Diskon Harga. Jika Kode Promo diisi, diskon berlaku setelah user menekan Apply kode.</small>
-                    <div class="mb-2"><label>Target Value (opsional)</label><input type="text" id="edit_promo_target_value" class="form-control" placeholder="Contoh: mobile legend, free fire, ml_10k"></div>
-                    <small class="text-muted d-block mb-2">Untuk beberapa target, pisahkan dengan koma.</small>
-                    <div class="row g-2">
-                        <div class="col-md-4 mb-2"><label>Jenis Diskon</label><select id="edit_promo_discount_type" class="form-select"><option value="">-</option><option value="percent">Persen</option><option value="fixed">Nominal</option></select></div>
-                        <div class="col-md-4 mb-2"><label>Nilai Diskon</label><input type="number" id="edit_promo_discount_value" class="form-control" min="0" step="0.01"></div>
-                        <div class="col-md-4 mb-2"><label>Maks Diskon</label><input type="number" id="edit_promo_max_discount" class="form-control" min="0" step="0.01"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Badge</label><input type="text" id="edit_promo_badge" class="form-control"><small class="text-muted">Label pendek di kartu promo.</small></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Tipe Promo</label><select id="edit_promo_rule_type" class="form-select"><option value="content">Konten Banner</option><option value="price">Diskon Harga</option></select><small class="text-muted">Diskon Harga memotong checkout.</small></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Cakupan Produk</label><select id="edit_promo_target_scope" class="form-select promo-target-scope"><option value="all">Semua produk</option><option value="category">Kategori</option><option value="provider">Provider/Game</option><option value="sku">Produk/SKU tertentu</option></select></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>CTA Text</label><input type="text" id="edit_promo_cta_text" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>CTA URL</label><input type="text" id="edit_promo_cta_url" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label fw-bold">Target</label><select id="edit_promo_target_value" class="form-select promo-target-value"></select><small class="text-muted">Opsinya dari database produk.</small></div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Metode Pembayaran</label>
+                            <div class="border rounded-3 p-2">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <small class="text-muted">Centang metode khusus. Tidak ada centang = semua metode.</small>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPromoPaymentMethods('edit_promo')">Semua Metode</button>
+                                </div>
+                                <input type="search" id="edit_promo_payment_method_search" class="form-control form-control-sm mb-2" placeholder="Cari QRIS, DANA, BCA..." oninput="filterPromoPaymentMethods('edit_promo')">
+                                <div id="edit_promo_payment_methods" class="promo-method-grid"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Image URL</label><input type="text" id="edit_promo_image_url" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Upload Image</label><input type="file" id="edit_promo_image_file" class="form-control" accept="image/*"></div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <label class="form-label fw-bold mb-1">Deskripsi</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="autofillPromoDescription('edit_promo')">Isi Otomatis</button>
+                        </div>
+                        <textarea id="edit_promo_description" class="form-control" rows="2"></textarea>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2"><label>Starts At</label><input type="datetime-local" id="edit_promo_starts_at" class="form-control"></div>
-                        <div class="col-md-6 mb-2"><label>Ends At</label><input type="datetime-local" id="edit_promo_ends_at" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Jenis Diskon</label><select id="edit_promo_discount_type" class="form-select"><option value="">Tidak ada</option><option value="percent">Persen (%)</option><option value="fixed">Nominal rupiah</option></select></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nilai Diskon</label><input type="number" id="edit_promo_discount_value" class="form-control" min="0"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Maks Diskon</label><input type="number" id="edit_promo_max_discount" class="form-control" min="0" placeholder="0 = tanpa batas"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Maksimal Penggunaan</label><select id="edit_promo_usage_mode" class="form-select"><option value="unlimited">Tidak dibatasi</option><option value="limited">Batasi jumlah pemakaian</option></select></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Jumlah Maksimal</label><input type="number" id="edit_promo_usage_limit" class="form-control" min="0" disabled><small class="text-muted" id="edit_promo_usage_hint"></small></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Arahkan Tombol ke</label><select id="edit_promo_cta_preset" class="form-select"><option value="products">Section produk</option><option value="target">Target promo terpilih</option><option value="latest">Halaman daftar promo</option><option value="custom">URL manual</option></select></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Budget Subsidi</label><input type="number" id="edit_promo_budget_limit" class="form-control" min="0" placeholder="0 = tanpa budget"><small class="text-muted" id="edit_promo_budget_hint"></small></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Limit per Akun</label><input type="number" id="edit_promo_max_per_customer" class="form-control" min="0" placeholder="0 = tanpa batas"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Limit per Nomor WA</label><input type="number" id="edit_promo_max_per_phone" class="form-control" min="0" placeholder="0 = tanpa batas"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Limit per Target ID</label><input type="number" id="edit_promo_max_per_target" class="form-control" min="0" placeholder="0 = tanpa batas"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Gabung Promo</label><select id="edit_promo_stackable" class="form-select"><option value="1">Boleh digabung</option><option value="0">Tidak boleh digabung</option></select></div>
+                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Prioritas</label><input type="number" id="edit_promo_priority" class="form-control" min="0" placeholder="0"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label fw-bold">CTA Text</label><input type="text" id="edit_promo_cta_text" class="form-control"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label fw-bold">CTA URL</label><input type="text" id="edit_promo_cta_url" class="form-control"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gambar Promo</label>
+                        <div class="input-group">
+                            <input type="text" id="edit_promo_image_url" class="form-control">
+                            <button class="btn btn-outline-secondary" type="button" onclick="pickPromoImage('edit_promo')">Upload</button>
+                        </div>
+                        <input type="file" id="edit_promo_image_file" class="d-none" accept="image/*">
+                    </div>
+                    <div class="border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <div>
+                                <label class="form-label fw-bold mb-0">Simulasi Promo</label>
+                                <small class="text-muted d-block">Cek hasil promo sebelum disimpan.</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="simulatePromo('edit_promo')">Cek Simulasi</button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-7 mb-2"><select id="edit_promo_simulation_sku" class="form-select"></select></div>
+                            <div class="col-md-5 mb-2"><select id="edit_promo_simulation_method" class="form-select"></select></div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label small" for="edit_promo_simulation_identity_mode">Status login</label>
+                                <select id="edit_promo_simulation_identity_mode" class="form-select">
+                                    <option value="guest">Guest (tanpa login)</option>
+                                    <option value="member">Member terdaftar</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8" data-promo-simulation-account hidden>
+                                <label class="form-label small" for="edit_promo_simulation_customer_id">Akun member</label>
+                                <select id="edit_promo_simulation_customer_id" class="form-select"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" for="edit_promo_simulation_customer_phone">Nomor WhatsApp identitas</label>
+                                <input type="tel" id="edit_promo_simulation_customer_phone" class="form-control" autocomplete="off" placeholder="08xxxxxxxxxx atau +628xxxxxxxxxx">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" for="edit_promo_simulation_target_id">Target transaksi</label>
+                                <input type="text" id="edit_promo_simulation_target_id" class="form-control" autocomplete="off" placeholder="ID game/tujuan (opsional)">
+                            </div>
+                            <div class="col-12 form-text" id="edit_promo_simulation_identity_help">Histori transaksi ditentukan backend dari identitas ini dan tidak dapat dipilih manual.</div>
+                        </div>
+                        <div id="edit_promo_simulation_result" class="small text-muted"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Mulai</label><input type="datetime-local" id="edit_promo_starts_at" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Berakhir</label><input type="datetime-local" id="edit_promo_ends_at" class="form-control"></div>
                     </div>
                     <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_promo_show_on_website"><label class="form-check-label" for="edit_promo_show_on_website">Tampilkan di website</label></div>
                     <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_promo_active"><label class="form-check-label" for="edit_promo_active">Aktif</label></div>
@@ -366,7 +874,187 @@
         </div>
     </div>
 
+    <!-- DETAIL DAN RIWAYAT PROMO -->
+    <div class="modal fade" id="promoDetailModal" tabindex="-1" aria-labelledby="promoDetailModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="promoDetailModalTitle">Detail Promo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body" id="promo_detail_content" aria-live="polite"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="promoUsageModal" tabindex="-1" aria-labelledby="promoUsageModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="promoUsageModalTitle">Penggunaan Promo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body" id="promo_usage_content" aria-live="polite"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH ADMIN -->
+    <div class="modal fade" id="addAdminModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Tambah Akun Admin</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Username</label><input type="text" id="admin_username" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Password</label><input type="password" id="admin_password" class="form-control" placeholder="Minimal 8 karakter"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kelas Admin</label><select id="admin_role" class="form-select"></select></div>
+                        <div class="col-md-6 mb-2 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="admin_active" checked><label class="form-check-label" for="admin_active">Aktif</label></div></div>
+                    </div>
+                    <label class="form-label fw-bold mt-2">Hak Akses</label>
+                    <div id="admin_permissions" class="row"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewAdmin()">Simpan Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT ADMIN -->
+    <div class="modal fade" id="editAdminModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Edit Akun Admin</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_admin_id">
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Username</label><input type="text" id="edit_admin_username" class="form-control" disabled></div>
+                        <div class="col-md-6 mb-2"><label>Password Baru</label><input type="password" id="edit_admin_password" class="form-control" placeholder="Kosongkan jika tidak diubah"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kelas Admin</label><select id="edit_admin_role" class="form-select"></select></div>
+                        <div class="col-md-6 mb-2 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="edit_admin_active"><label class="form-check-label" for="edit_admin_active">Aktif</label></div></div>
+                    </div>
+                    <label class="form-label fw-bold mt-2">Hak Akses</label>
+                    <div id="edit_admin_permissions" class="row"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" onclick="saveEditAdmin()">Simpan Perubahan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH KONTEN -->
+    <div class="modal fade" id="addPageModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Tambah Konten Website</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8 mb-2"><label>Judul</label><input type="text" id="page_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Slug URL</label><input type="text" id="page_slug" class="form-control" placeholder="promo-ramadan"></div>
+                    </div>
+                    <div class="mb-2"><label>Ringkasan</label><input type="text" id="page_excerpt" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label>Tipe Halaman</label><select id="page_type" class="form-select"><option value="general">Umum</option><option value="promo">Promo Landing</option></select></div>
+                        <div class="col-md-4 mb-2"><label>Badge</label><input type="text" id="page_badge" class="form-control" placeholder="Promo Terbaru, Flash Sale"></div>
+                        <div class="col-md-4 mb-2"><label>Warna Aksen</label><select id="page_accent_color" class="form-select"><option value="gold">Gold</option><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
+                    </div>
+                    <div class="mb-2"><label>Image URL Hero</label><input type="text" id="page_image_url" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>CTA Utama</label><input type="text" id="page_cta_text" class="form-control" placeholder="Ambil Promo"></div>
+                        <div class="col-md-6 mb-2"><label>URL CTA Utama</label><input type="text" id="page_cta_url" class="form-control" placeholder="/#produk-section, game:Mobile Legends, /promo/latest"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>CTA Kedua</label><input type="text" id="page_secondary_cta_text" class="form-control" placeholder="Lihat Produk"></div>
+                        <div class="col-md-6 mb-2"><label>URL CTA Kedua</label><input type="text" id="page_secondary_cta_url" class="form-control" placeholder="/#produk-section"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kode Promo</label><input type="text" id="page_promo_code" class="form-control" placeholder="LIXAFA10"></div>
+                        <div class="col-md-6 mb-2"><label>Judul Benefit</label><input type="text" id="page_highlight_title" class="form-control" placeholder="Kenapa promo ini menarik?"></div>
+                    </div>
+                    <div class="mb-2"><label>Benefit Promo</label><textarea id="page_highlight_items" class="form-control" rows="4" placeholder="Satu benefit per baris"></textarea></div>
+                    <div class="mb-2"><label>Syarat & Ketentuan</label><textarea id="page_terms_text" class="form-control" rows="4" placeholder="Satu syarat per baris"></textarea></div>
+                    <div class="mb-2"><label>Isi Konten</label><textarea id="page_content" class="form-control" rows="8"></textarea></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="page_show_on_website" checked><label class="form-check-label" for="page_show_on_website">Tampilkan di website</label></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="page_active" checked><label class="form-check-label" for="page_active">Aktif</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewPage()">Simpan Konten</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT KONTEN -->
+    <div class="modal fade" id="editPageModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Edit Konten Website</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_page_id">
+                    <div class="row">
+                        <div class="col-md-8 mb-2"><label>Judul</label><input type="text" id="edit_page_title" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Slug URL</label><input type="text" id="edit_page_slug" class="form-control"></div>
+                    </div>
+                    <div class="mb-2"><label>Ringkasan</label><input type="text" id="edit_page_excerpt" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label>Tipe Halaman</label><select id="edit_page_type" class="form-select"><option value="general">Umum</option><option value="promo">Promo Landing</option></select></div>
+                        <div class="col-md-4 mb-2"><label>Badge</label><input type="text" id="edit_page_badge" class="form-control"></div>
+                        <div class="col-md-4 mb-2"><label>Warna Aksen</label><select id="edit_page_accent_color" class="form-select"><option value="gold">Gold</option><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
+                    </div>
+                    <div class="mb-2"><label>Image URL Hero</label><input type="text" id="edit_page_image_url" class="form-control"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>CTA Utama</label><input type="text" id="edit_page_cta_text" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>URL CTA Utama</label><input type="text" id="edit_page_cta_url" class="form-control"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>CTA Kedua</label><input type="text" id="edit_page_secondary_cta_text" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>URL CTA Kedua</label><input type="text" id="edit_page_secondary_cta_url" class="form-control"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><label>Kode Promo</label><input type="text" id="edit_page_promo_code" class="form-control"></div>
+                        <div class="col-md-6 mb-2"><label>Judul Benefit</label><input type="text" id="edit_page_highlight_title" class="form-control"></div>
+                    </div>
+                    <div class="mb-2"><label>Benefit Promo</label><textarea id="edit_page_highlight_items" class="form-control" rows="4"></textarea></div>
+                    <div class="mb-2"><label>Syarat & Ketentuan</label><textarea id="edit_page_terms_text" class="form-control" rows="4"></textarea></div>
+                    <div class="mb-2"><label>Isi Konten</label><textarea id="edit_page_content" class="form-control" rows="8"></textarea></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_page_show_on_website"><label class="form-check-label" for="edit_page_show_on_website">Tampilkan di website</label></div>
+                    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="edit_page_active"><label class="form-check-label" for="edit_page_active">Aktif</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" onclick="saveEditPage()">Simpan Perubahan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wajib untuk fungsionalitas Modal Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/web/js/dashboard.js?v=8"></script>
+    <script src="/web/js/dashboard.js?v=promo-eligibility-20260720-1"></script>
 </body>
 </html>
