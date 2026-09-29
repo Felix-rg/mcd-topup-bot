@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LIXAFA PROJEK - Topup Digital Modern</title>
+  <title>LIXAFA - Topup Digital Modern</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <!-- Bootstrap untuk SweetAlert2 & Bootstrap JS (dipakai di backend topup.js) -->
@@ -73,9 +73,32 @@
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     display: flex; align-items: center; justify-content: center;
     position: relative; flex-shrink: 0;
+    overflow: hidden;
   }
   .nav-logo .logo-icon::before {
-    content: '◆'; color: var(--black); font-size: 14px; font-weight: 900;
+    content: 'L'; color: var(--black); font-size: 14px; font-weight: 900;
+  }
+  .nav-logo .logo-icon.has-image,
+  .footer-logo .logo-icon.has-image {
+    width: auto;
+    min-width: 0;
+    max-width: 160px;
+    clip-path: none;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    overflow: visible;
+  }
+  .footer-logo .logo-icon.has-image { max-width: 150px; }
+  .nav-logo .logo-icon.has-image::before,
+  .footer-logo .logo-icon.has-image::before { content: none; }
+  .nav-logo .logo-icon img,
+  .footer-logo .logo-icon img {
+    width: auto; height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 0;
   }
   .nav-logo span {
     font-size: 22px; font-weight: 800;
@@ -141,15 +164,6 @@
   }
   .nav-cek-pesanan:hover { border-color: var(--gold); color: var(--gold-light); }
 
-  /* Link admin */
-  .nav-admin {
-    padding: 6px 14px; border: 1.5px solid var(--gold);
-    background: rgba(193,155,50,0.08); color: var(--gold-light);
-    border-radius: 6px; font-size: 13px; font-weight: 600;
-    text-decoration: none; transition: all 0.2s;
-  }
-  .nav-admin:hover { background: rgba(193,155,50,0.2); color: var(--gold-light); }
-
   .nav-hamburger {
     display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px;
     background: none; border: none;
@@ -190,7 +204,7 @@
     letter-spacing: 1.5px; text-transform: uppercase;
     margin-bottom: 24px;
   }
-  .hero-badge::before { content: '⚡'; font-size: 12px; }
+  .hero-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-light); box-shadow: 0 0 10px rgba(235,193,102,0.8); }
 
   .hero-title {
     font-size: clamp(36px, 5vw, 64px);
@@ -280,12 +294,48 @@
     /* game-list dirender dinamis oleh JS (kategori -> provider cards) */
     #game-list { display: block; }
     .game-category-block { width: 100%; margin-bottom: 24px; }
+  .storefront-toolbar {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
+    align-items: center; margin-bottom: 20px;
+  }
+  .storefront-search {
+    position: relative;
+  }
+  .storefront-search i {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--gold-light); font-size: 13px;
+  }
+  .storefront-search input {
+    width: 100%; min-height: 44px; padding: 11px 14px 11px 40px;
+    background: rgba(255,255,255,0.04); color: var(--body-text);
+    border: 1px solid var(--border); border-radius: 8px; outline: none;
+    font-family: 'Poppins', sans-serif; font-size: 14px;
+  }
+  .storefront-search input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(193,155,50,0.1); }
+  .category-filter-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .category-filter-btn {
+    border: 1px solid var(--border); background: rgba(255,255,255,0.035);
+    color: var(--body-text); border-radius: 999px; min-height: 38px;
+    padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+  }
+  .category-filter-btn.active,
+  .category-filter-btn:hover {
+    border-color: var(--gold); color: var(--black); background: var(--gradient);
+  }
+  .category-filter-btn:focus-visible,
+  .game-card:focus-visible,
+  .nominal-card:focus-visible,
+  .payment-option-txn:focus-visible {
+    outline: 3px solid rgba(235,193,102,0.5); outline-offset: 2px;
+  }
 
   .game-card {
     background: var(--card-bg); border: 1px solid var(--border);
     border-radius: 12px; overflow: hidden;
     text-align: center; cursor: pointer; transition: all 0.25s;
-    position: relative;
+    position: relative; width: 100%; padding: 0; color: inherit;
+    font: inherit; appearance: none;
   }
   .game-card::before {
     content: ''; position: absolute; inset: 0;
@@ -297,6 +347,22 @@
   .game-title {
     padding: 12px 8px; font-weight: 700; font-size: 0.85rem;
     text-transform: uppercase; color: #FFF; position: relative; z-index: 1;
+  }
+  .game-card-meta {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 0 12px 12px; color: var(--muted); font-size: 11px;
+    position: relative; z-index: 1;
+  }
+  .game-badge {
+    position: absolute; left: 10px; top: 10px; z-index: 2;
+    display: inline-flex; align-items: center; min-height: 24px;
+    padding: 4px 9px; border-radius: 999px;
+    background: rgba(5,5,5,0.78); border: 1px solid rgba(235,193,102,0.45);
+    color: var(--gold-light); font-size: 11px; font-weight: 800;
+  }
+  .empty-storefront {
+    border: 1px dashed var(--border); border-radius: 12px; padding: 28px;
+    text-align: center; color: var(--muted); background: rgba(255,255,255,0.025);
   }
 
   /* ===== HOW TO TOP UP ===== */
@@ -346,6 +412,9 @@
   .payment-logo.bri { color: #0B5491; }
   .payment-logo.bni { color: #F58220; }
   .payment-logo.mandiri { color: #003087; }
+  .payment-source-note {
+    color: var(--muted); font-size: 12px; margin-top: 14px;
+  }
 
   /* ===== PROMO BANNER ===== */
   .promo-banner {
@@ -406,9 +475,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 8px; flex-wrap: wrap;
     font-size: 11px;
-    color: #c0c7d3;
+    color: #c0c7d3; overflow-wrap: anywhere;
   }
 
   .promo-code-box {
@@ -462,8 +531,9 @@
     width: 32px; height: 32px; background: var(--gradient);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
   }
-  .footer-logo .logo-icon::before { content: '◆'; color: var(--black); font-size: 12px; font-weight: 900; }
+  .footer-logo .logo-icon::before { content: 'L'; color: var(--black); font-size: 12px; font-weight: 900; }
   .footer-logo span {
     font-size: 20px; font-weight: 800;
     background: var(--gradient); -webkit-background-clip: text;
@@ -478,6 +548,12 @@
     cursor: pointer; text-decoration: none;
   }
   .social-btn:hover { border-color: var(--gold); color: var(--gold-light); background: rgba(193,155,50,0.1); }
+  .social-btn[aria-disabled="true"] {
+    cursor: not-allowed; opacity: .55;
+  }
+  .social-btn[aria-disabled="true"]:hover {
+    border-color: var(--border); color: var(--muted); background: transparent;
+  }
 
   .footer-col h5 {
     font-size: 13px; font-weight: 700; color: var(--gold-light);
@@ -486,6 +562,10 @@
   .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.2s; cursor: pointer; }
   .footer-links a:hover { color: var(--gold-light); }
+  .footer-links a.is-disabled {
+    cursor: not-allowed; opacity: .58;
+  }
+  .footer-links a.is-disabled:hover { color: var(--muted); }
 
   .footer-payment-logos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .fp-logo {
@@ -524,7 +604,7 @@
     background: linear-gradient(90deg, transparent, rgba(193,155,50,0.05));
   }
   .game-hero-banner::after {
-    content: '›› ›'; position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
+    content: '>>>'; position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
     font-size: 80px; color: rgba(193,155,50,0.08); font-weight: 900; letter-spacing: -10px;
   }
   .game-hero-left { display: flex; align-items: center; gap: 20px; position: relative; z-index: 2; }
@@ -586,6 +666,12 @@
   .form-input-custom::placeholder { color: var(--muted); }
   select.form-input-custom { cursor: pointer; }
   select.form-input-custom option { background: var(--charcoal); }
+  .promo-input-group { flex-wrap: nowrap; }
+  .promo-input-group .form-input-custom {
+    flex: 1 1 auto; width: 1%; min-width: 0;
+    border-top-right-radius: 0; border-bottom-right-radius: 0;
+  }
+  .promo-input-group .btn { flex: 0 0 auto; white-space: nowrap; }
 
   /* Dynamic input container — row bawaan Bootstrap tetap jalan */
   #dynamic-input-container .form-control {
@@ -634,14 +720,15 @@
     border: 1.5px solid var(--border);
     border-radius: 8px; padding: 12px 14px;
     cursor: pointer; transition: all 0.2s;
-    position: relative; text-align: center; height: 100%;
+    position: relative; text-align: center; height: 100%; width: 100%;
+    color: inherit; font: inherit; appearance: none; overflow-wrap: anywhere;
   }
   .nominal-card:hover { border-color: var(--gold); background: rgba(193,155,50,0.05); }
   .nominal-card.active {
     border-color: var(--gold); background: rgba(193,155,50,0.1);
   }
   .nominal-card.active::after {
-    content: '✓'; position: absolute; top: 6px; right: 8px;
+    content: '\2713'; position: absolute; top: 6px; right: 8px;
     width: 18px; height: 18px; border-radius: 50%;
     background: var(--gold); color: var(--black);
     font-size: 10px; font-weight: 800;
@@ -660,13 +747,36 @@
     padding: 13px 16px;
     border: 1.5px solid var(--border);
     border-radius: 8px; margin-bottom: 8px;
-    cursor: pointer; transition: all 0.2s;
+    cursor: pointer; transition: all 0.2s; width: 100%;
+    background: transparent; color: inherit; font: inherit; text-align: left;
   }
   .payment-option-txn:hover { border-color: var(--gold); background: rgba(193,155,50,0.03); }
   .payment-option-txn.active { border-color: var(--gold); background: rgba(193,155,50,0.07); }
   .payment-option-left-txn {
     display: flex; align-items: center; gap: 12px;
-    font-size: 13px; font-weight: 600; color: var(--body-text);
+    font-size: 13px; font-weight: 600; color: var(--body-text); min-width: 0;
+  }
+  .payment-option-copy {
+    display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere;
+  }
+  .payment-option-right-txn {
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .payment-option-fee {
+    font-size: 12px; font-weight: 700; color: var(--gold-light); white-space: nowrap;
+  }
+  .payment-option-fee.muted {
+    color: #7f8898;
+  }
+  .payment-option-note {
+    font-size: 11px; color: #d4a84e; line-height: 1.2;
+  }
+  .payment-option-txn.disabled {
+    cursor: not-allowed; opacity: 0.55; border-color: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+  }
+  .payment-option-txn.disabled:hover {
+    border-color: rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);
   }
   .payment-option-logo-txn {
     font-size: 12px; font-weight: 700; padding: 4px 10px;
@@ -693,11 +803,14 @@
 
   /* ===== ORDER SUMMARY ===== */
   .summary-row {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px; font-size: 13px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; margin-bottom: 10px; font-size: 13px; min-width: 0;
   }
-  .summary-row .label { color: var(--muted); }
-  .summary-row .value { color: var(--body-text); font-weight: 500; }
+  .summary-row .label { color: var(--muted); flex: 0 0 auto; }
+  .summary-row .value {
+    color: var(--body-text); font-weight: 500; min-width: 0;
+    max-width: 68%; text-align: right; overflow-wrap: anywhere;
+  }
   .summary-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
   /* ===== BTN PAY ===== */
@@ -716,6 +829,31 @@
     margin-top: 10px; font-size: 11px; color: var(--muted);
   }
   .secure-note i { color: var(--gold); }
+  .live-summary-card {
+    border: 1px solid rgba(235,193,102,0.25);
+    background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018));
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+  }
+  .live-summary-title {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    color: #fff; font-weight: 800; margin-bottom: 12px; font-size: 14px;
+  }
+  .live-summary-title span {
+    color: var(--gold-light); font-size: 11px; text-transform: uppercase; letter-spacing: 0;
+  }
+  .summary-total {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .summary-total strong { color: var(--gold-light); font-size: 18px; }
+  .order-trust-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;
+  }
+  .order-trust-item {
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px;
+    text-align: center; color: var(--muted); font-size: 11px; background: rgba(255,255,255,0.025);
+  }
+  .order-trust-item i { display: block; color: var(--gold-light); margin-bottom: 6px; }
 
   /* ===== CONFIRM MODAL (Bootstrap override) ===== */
   #confirmModal .modal-content {
@@ -738,8 +876,10 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
   }
   #confirmModal .confirm-summary .d-flex {
-    gap: 14px;
+    gap: 14px; min-width: 0;
   }
+  #confirmModal .confirm-summary .d-flex > * { min-width: 0; overflow-wrap: anywhere; }
+  #confirmModal .confirm-summary strong { text-align: right; }
   #confirmModal .text-muted { color: #b7beca !important; }
   #confirmModal .confirm-summary .text-muted { color: #c7ccd6 !important; }
   #confirmModal strong { color: #FFF; font-weight: 700; }
@@ -750,6 +890,8 @@
   #confirmModal #conf-method,
   #confirmModal #conf-base-price { color: #f4f6fb !important; }
   #confirmModal #conf-nick { color: var(--gold-light) !important; }
+  #confirmModal #conf-discount { color: #7ee2a8 !important; }
+  #confirmModal #conf-promo { color: var(--gold-light) !important; }
   #confirmModal #conf-fee { color: #ffb37e !important; }
   #confirmModal #conf-price { color: var(--gold-light) !important; }
   #confirmModal hr { border-color: var(--border); }
@@ -778,6 +920,43 @@
     color: var(--black) !important; font-weight: 700 !important;
   }
   #hasil_cek_pesanan { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; }
+
+  #customerAccountModal .modal-content {
+    background: var(--card-bg); border: 1px solid var(--gold); color: var(--body-text);
+    border-radius: 16px;
+  }
+  #customerAccountModal .modal-header { border-color: var(--border); background: var(--charcoal); border-radius: 15px 15px 0 0; }
+  #customerAccountModal .modal-title { color: var(--gold-light); }
+  #customerAccountModal .form-control {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--body-text) !important;
+    border-radius: 8px !important;
+  }
+  #customerAccountModal .form-control::placeholder { color: var(--muted) !important; }
+  #customerAccountModal .form-control:focus { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(193,155,50,0.1) !important; }
+  #customerAccountModal .nav-link {
+    color: var(--body-text);
+    border-color: transparent;
+  }
+  #customerAccountModal .nav-link.active {
+    color: var(--black);
+    background: var(--gradient);
+    border-color: transparent;
+    font-weight: 800;
+  }
+  #customerAccountModal .nav-tabs,
+  #customerAccountModal .nav-pills {
+    border-color: var(--border);
+    gap: 6px;
+  }
+  #customerAccountModal .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--body-text);
+    --bs-table-border-color: rgba(193,155,50,0.18);
+    --bs-table-hover-bg: rgba(193,155,50,0.08);
+    color: var(--body-text);
+  }
 
   /* ===== STATUS MODAL (Bootstrap override) ===== */
   #statusModal .modal-content {
@@ -876,7 +1055,9 @@
     .features-grid { grid-template-columns: repeat(2, 1fr); }
     .payment-grid-home { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
-    .promo-banner { flex-direction: column; gap: 20px; }
+    .storefront-toolbar { grid-template-columns: 1fr; }
+    .category-filter-bar { justify-content: flex-start; }
+    .promo-banner { flex-direction: column; gap: 20px; padding: 30px 24px; }
     .promo-banner-grid { grid-template-columns: 1fr; }
     .promo-art { font-size: 60px; align-self: flex-end; }
     .steps-grid { grid-template-columns: 1fr; }
@@ -888,6 +1069,16 @@
     .features-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr; }
     #nominal-grid > div { flex: 0 0 calc(50% - 5px); }
+    .promo-banner { margin: 0 4% 42px; padding: 24px 18px; }
+    .promo-banner-grid { margin: 0 4% 42px; }
+    .payment-option-txn { align-items: flex-start; gap: 10px; padding: 12px; }
+    .payment-option-right-txn { gap: 7px; }
+    .payment-option-fee { white-space: normal; text-align: right; }
+    .summary-row .value { max-width: 62%; }
+  }
+  @media (max-width: 360px) {
+    #nominal-grid > div { flex-basis: 100%; }
+    .promo-input-group .btn { padding-left: 10px; padding-right: 10px; }
   }
   </style>
 </head>
@@ -896,24 +1087,24 @@
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar" id="navbar">
   <a class="nav-logo" onclick="showHome()">
-    <div class="logo-icon"></div>
-    <span>LIXAFA PROJEK</span>
+    <div class="logo-icon" data-brand-logo></div>
+    <span data-site-name>LIXAFA</span>
   </a>
 
   <ul class="nav-links" id="navLinksHome">
     <li><a id="nav-home" class="active" onclick="scrollToSection('home')">Beranda</a></li>
     <li><a id="nav-cara-topup" onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
-    <li><a id="nav-promo" onclick="scrollToSection('promo')">Promo</a></li>
+    <li><a id="nav-promo" href="/promo/latest">Promo</a></li>
     <li><a id="nav-footer" onclick="scrollToSection('footer')">Bantuan</a></li>
     <span class="nav-indicator" id="navIndicator"></span>
   </ul>
 
   <div class="nav-actions" id="navActionsHome">
+    <a class="nav-cek-pesanan" href="#" data-bs-toggle="modal" data-bs-target="#customerAccountModal" onclick="loadCustomerAccount()">
+      <i class="fas fa-user-circle"></i> <span id="customer_nav_label">Akun</span>
+    </a>
     <a class="nav-cek-pesanan" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan">
       <i class="fas fa-search"></i> Cek Pesanan
-    </a>
-    <a class="nav-admin" href="/admin">
-      <i class="fas fa-user-shield"></i> Admin
     </a>
   </div>
 
@@ -926,13 +1117,15 @@
 <div class="mobile-nav" id="mobileNav">
   <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('home')">Beranda</a>
   <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('cara-topup')">Cara Top Up</a>
-  <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('promo')">Promo</a>
+  <a class="mobile-nav-link" href="/promo/latest" onclick="closeMobileNav()">Promo</a>
   <a class="mobile-nav-link" onclick="closeMobileNav(); scrollToSection('footer')">Bantuan</a>
   <hr class="mobile-nav-divider">
   <a class="mobile-nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalCekPesanan" onclick="closeMobileNav()">
     <i class="fas fa-search"></i> Cek Pesanan
   </a>
-  <a class="mobile-nav-link" href="/admin"><i class="fas fa-user-shield"></i> Admin</a>
+  <a class="mobile-nav-link" href="#" data-bs-toggle="modal" data-bs-target="#customerAccountModal" onclick="closeMobileNav(); loadCustomerAccount()">
+    <i class="fas fa-user-circle"></i> Akun Customer
+  </a>
 </div>
 
 <!-- ===== SCROLL TO TOP ===== -->
@@ -942,7 +1135,7 @@
 
 <!-- ===== TOAST ===== -->
 <div class="toast-custom" id="toastCustom">
-  <span class="toast-icon" id="toastIcon">✅</span>
+  <span class="toast-icon" id="toastIcon">OK</span>
   <span class="toast-msg" id="toastMsg">Berhasil!</span>
 </div>
 
@@ -973,7 +1166,7 @@
       <svg viewBox="0 0 420 480" width="420" xmlns="http://www.w3.org/2000/svg">
         <polygon points="210,20 400,160 400,320 210,460 20,320 20,160" fill="none" stroke="url(#dGrad)" stroke-width="1.5" opacity="0.5"/>
         <polygon points="210,60 370,180 370,300 210,420 50,300 50,180" fill="url(#dFill)" opacity="0.08"/>
-        <text x="210" y="260" text-anchor="middle" font-size="120" opacity="0.5">⚔️</text>
+        <text x="210" y="260" text-anchor="middle" font-size="120" opacity="0.5">L</text>
         <defs>
           <linearGradient id="dGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9E6710"/><stop offset="50%" stop-color="#EBC166"/><stop offset="100%" stop-color="#9E6710"/></linearGradient>
           <linearGradient id="dFill" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C19B32"/><stop offset="100%" stop-color="#EBC166"/></linearGradient>
@@ -985,7 +1178,7 @@
     <div class="hero-content fade-in">
       <div class="hero-badge">Top Up Game &amp; Digital Product</div>
       <h1 class="hero-title">Top Up Cepat,</h1>
-      <span class="hero-title-accent gold-shimmer">Aman &amp; Terpercaya</span>
+      <span class="hero-title-accent gold-shimmer">Jelas &amp; Praktis</span>
       <p class="hero-desc">Nikmati pengalaman top up terbaik dengan proses instan 24 jam dan berbagai metode pembayaran pilihan.</p>
       <div class="hero-cta">
         <button class="btn-hero-primary" onclick="document.getElementById('produk-section').scrollIntoView({behavior:'smooth'})">
@@ -1003,19 +1196,19 @@
     <div class="features-grid">
       <div class="feature-card">
         <div class="feature-icon"><i class="fas fa-bolt"></i></div>
-        <div class="feature-text"><h4>Proses Instan</h4><p>1 Detik Otomatis</p></div>
+        <div class="feature-text"><h4>Proses Otomatis</h4><p id="storefront_success_rate">Diproses oleh sistem 24 jam</p></div>
       </div>
       <div class="feature-card">
         <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
-        <div class="feature-text"><h4>Aman &amp; Terpercaya</h4><p>100% Garansi</p></div>
+        <div class="feature-text"><h4>Status Transparan</h4><p id="storefront_success_orders">Pesanan bisa dicek realtime</p></div>
       </div>
       <div class="feature-card">
         <div class="feature-icon"><i class="fas fa-credit-card"></i></div>
-        <div class="feature-text"><h4>Metode Lengkap</h4><p>QRIS, OVO, DANA</p></div>
+        <div class="feature-text"><h4>Produk Lengkap</h4><p id="storefront_product_count">Katalog aktif</p></div>
       </div>
       <div class="feature-card">
         <div class="feature-icon"><i class="fas fa-headset"></i></div>
-        <div class="feature-text"><h4>Support 24/7</h4><p>Siap membantu</p></div>
+        <div class="feature-text"><h4>Promo Aktif</h4><p id="storefront_promo_count">Voucher dan campaign</p></div>
       </div>
     </div>
   </section>
@@ -1025,8 +1218,15 @@
     <div class="section-header">
       <h2 class="section-title"><i class="fas fa-fire" style="color:#EBC166;margin-right:8px;"></i>Sedang Populer</h2>
     </div>
+    <div class="storefront-toolbar">
+      <div class="storefront-search">
+        <i class="fas fa-search"></i>
+        <input type="search" id="productSearchInput" placeholder="Cari game, provider, voucher, atau produk..." aria-label="Cari produk">
+      </div>
+      <div class="category-filter-bar" id="categoryFilterBar" role="group" aria-label="Filter kategori produk"></div>
+    </div>
     <!-- game-list diisi oleh JS (topup.js → renderGameList) -->
-    <div id="game-list"></div>
+    <div id="game-list" aria-live="polite"></div>
   </section>
 
   <!-- CARA TOP UP -->
@@ -1070,62 +1270,40 @@
     <div class="section-header">
       <h2 class="section-title">Metode Pembayaran</h2>
     </div>
-    <div class="payment-grid-home">
-      <div class="payment-group">
-        <div class="payment-group-title">E-Wallet</div>
-        <div class="payment-logos">
-          <div class="payment-logo dana">◉ DANA</div>
-          <div class="payment-logo ovo">● OVO</div>
-          <div class="payment-logo gopay">⊙ gopay</div>
-          <div class="payment-logo shopeepay">🛍 ShopeePay</div>
-        </div>
-      </div>
-      <div class="payment-group">
-        <div class="payment-group-title">Bank Transfer</div>
-        <div class="payment-logos">
-          <div class="payment-logo bca">▣ BCA</div>
-          <div class="payment-logo bri">▣ BRI</div>
-          <div class="payment-logo bni">▣ BNI</div>
-          <div class="payment-logo mandiri">■ mandiri</div>
-        </div>
-      </div>
-      <div class="payment-group">
-        <div class="payment-group-title">QRIS</div>
-        <div class="payment-logos">
-          <div class="payment-logo" style="color:#555;font-size:14px;letter-spacing:2px;font-weight:900;">QRIS</div>
-        </div>
-      </div>
+    <div class="payment-grid-home" id="homepagePaymentChannels" aria-live="polite">
+      <div class="empty-storefront">Memuat metode pembayaran aktif...</div>
     </div>
+    <p class="payment-source-note">Metode pembayaran mengikuti channel aktif dari sistem pembayaran.</p>
   </section>
 
   <!-- PROMO BANNER -->
   <div class="promo-banner" id="promo">
     <div class="promo-content">
       <div class="promo-title">Promo Spesial<br>Setiap Hari</div>
-      <p class="promo-desc">Dapatkan berbagai promo menarik setiap hari hanya di LIXAFA PROJEK!</p>
-      <button class="btn-hero-primary" onclick="showToastCustom('success','Pantau terus promo terbaru kami!')">
+      <p class="promo-desc">Cek voucher dan campaign aktif yang sedang tersedia di LIXAFA.</p>
+      <button class="btn-hero-primary" onclick="window.location.href='/promo/latest'">
         Lihat Promo <i class="fas fa-arrow-right"></i>
       </button>
     </div>
-    <div class="promo-art">🏅</div>
+    <div class="promo-art">%</div>
   </div>
 
-  <div class="promo-banner-grid" id="promoCampaignGrid"></div>
+  <div class="promo-banner-grid" id="promoCampaignGrid" aria-live="polite"></div>
 
   <!-- FOOTER -->
   <footer id="footer">
     <div class="footer-grid">
       <div>
         <div class="footer-logo">
-          <div class="logo-icon"></div>
-          <span>LIXAFA PROJEK</span>
+          <div class="logo-icon" data-brand-logo></div>
+          <span data-site-name>LIXAFA</span>
         </div>
-        <p class="footer-tagline">Top up game &amp; digital product termurah, terpercaya, dan tercepat.</p>
+        <p class="footer-tagline" data-footer-text>Top up game &amp; produk digital dengan pembayaran praktis dan status pesanan yang jelas.</p>
         <div class="footer-socials">
-          <a class="social-btn" href="#"><i class="fab fa-instagram"></i></a>
-          <a class="social-btn" href="#"><i class="fab fa-tiktok"></i></a>
-          <a class="social-btn" href="#"><i class="fab fa-facebook"></i></a>
-          <a class="social-btn" href="#"><i class="fab fa-discord"></i></a>
+          <span class="social-btn" aria-disabled="true" title="Instagram belum dikonfigurasi"><i class="fab fa-instagram"></i></span>
+          <span class="social-btn" aria-disabled="true" title="TikTok belum dikonfigurasi"><i class="fab fa-tiktok"></i></span>
+          <span class="social-btn" aria-disabled="true" title="Facebook belum dikonfigurasi"><i class="fab fa-facebook"></i></span>
+          <span class="social-btn" aria-disabled="true" title="Discord belum dikonfigurasi"><i class="fab fa-discord"></i></span>
         </div>
       </div>
       <div class="footer-col">
@@ -1133,35 +1311,27 @@
         <ul class="footer-links">
           <li><a onclick="scrollToSection('home')">Beranda</a></li>
           <li><a onclick="scrollToSection('cara-topup')">Cara Top Up</a></li>
-          <li><a onclick="scrollToSection('promo')">Promo</a></li>
-          <li><a>Bantuan</a></li>
+          <li><a href="/promo/latest">Promo</a></li>
+          <li><a data-bs-toggle="modal" data-bs-target="#modalCekPesanan">Bantuan / Cek Pesanan</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h5>Informasi</h5>
         <ul class="footer-links">
-          <li><a>Tentang Kami</a></li>
-          <li><a>Syarat &amp; Ketentuan</a></li>
-          <li><a>Kebijakan Privasi</a></li>
-          <li><a>Hubungi Kami</a></li>
+          <li><a class="is-disabled" data-footer-page="about">Tentang Kami belum tersedia</a></li>
+          <li><a class="is-disabled" data-footer-page="terms">Syarat &amp; Ketentuan belum tersedia</a></li>
+          <li><a class="is-disabled" data-footer-page="privacy">Kebijakan Privasi belum tersedia</a></li>
+          <li><a data-bs-toggle="modal" data-bs-target="#customerAccountModal" onclick="loadCustomerAccount()">Hubungi Kami via Support</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h5>Metode Pembayaran</h5>
-        <div class="footer-payment-logos">
-          <span class="fp-logo">DANA</span>
-          <span class="fp-logo">OVO</span>
-          <span class="fp-logo">gopay</span>
-          <span class="fp-logo">ShopeePay</span>
-          <span class="fp-logo">BCA</span>
-          <span class="fp-logo">BRI</span>
-          <span class="fp-logo">BNI</span>
-          <span class="fp-logo">mandiri</span>
-          <span class="fp-logo">QRIS</span>
+        <div class="footer-payment-logos" id="footerPaymentChannels" aria-live="polite">
+          <span class="fp-logo">Memuat channel aktif...</span>
         </div>
       </div>
     </div>
-    <div class="footer-bottom">© 2024 LIXAFA PROJEK. All rights reserved.</div>
+    <div class="footer-bottom">&copy; 2026 <span data-site-name>LIXAFA</span>. All rights reserved.</div>
   </footer>
 
 </div><!-- /home-view -->
@@ -1190,11 +1360,11 @@
       <div class="game-hero-info">
         <h2 id="game-title">Nama Game</h2>
         <div class="game-hero-badges">
-          <span class="hero-badge-item"><i class="fas fa-bolt"></i> Proses Otomatis 1 Detik</span>
-          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">•</span>
+          <span class="hero-badge-item"><i class="fas fa-bolt"></i> Proses otomatis</span>
+          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">&middot;</span>
           <span class="hero-badge-item"><i class="fas fa-shield-alt"></i> Aman</span>
-          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">•</span>
-          <span class="hero-badge-item"><i class="fas fa-check-circle"></i> 100% Terpercaya</span>
+          <span class="hero-badge-item" style="color:rgba(255,255,255,0.2)">&middot;</span>
+          <span class="hero-badge-item"><i class="fas fa-check-circle"></i> Status transparan</span>
         </div>
       </div>
     </div>
@@ -1217,12 +1387,12 @@
           <div id="dynamic-input-container" class="row g-2 mb-3"></div>
 
           <div class="form-group-custom">
-            <label class="form-label-custom">Nomor WhatsApp (Untuk Notifikasi)</label>
-            <input type="number" id="wa_pembeli" class="form-input-custom" placeholder="Contoh: 08123456789">
+            <label class="form-label-custom" for="wa_pembeli">Nomor WhatsApp (Untuk Notifikasi)</label>
+            <input type="tel" inputmode="numeric" autocomplete="tel" id="wa_pembeli" class="form-input-custom" placeholder="Contoh: 08123456789">
           </div>
 
           <!-- Nickname box: diisi topup.js via cekNicknameOtomatis() -->
-          <div id="nickname-box" style="display:none;">
+          <div id="nickname-box" style="display:none;" role="status" aria-live="polite">
             <i class="bi bi-person-check-fill"></i>
             Nickname: <strong id="player-nickname">Mencari...</strong>
           </div>
@@ -1237,7 +1407,7 @@
         </div>
         <div class="txn-panel-body">
           <!-- nominal-grid: diisi topup.js via renderNominals() dengan class nominal-card -->
-          <div id="nominal-grid" class="row g-3"></div>
+          <div id="nominal-grid" class="row g-3" role="group" aria-label="Pilih nominal top up"></div>
         </div>
       </div>
 
@@ -1254,38 +1424,20 @@
         </div>
         <div class="txn-panel-body">
           <!-- Hidden input method — dibaca topup.js via document.getElementById("method").value -->
-          <input type="hidden" id="method" value="QRIS">
+          <input type="hidden" id="method" value="">
 
-          <div class="payment-group-title-txn">QRIS</div>
-          <div class="payment-option-txn active" onclick="selectPayment('QRIS', this)">
-            <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn payment-logo-qris">QRIS</span>
-              <span style="font-size:12px;">Scan QR</span>
-            </div>
-            <div class="radio-circle"></div>
-          </div>
-
-          <div class="payment-group-title-txn" style="margin-top:14px;">E-Wallet</div>
-          <div class="payment-option-txn" onclick="selectPayment('OVO', this)">
-            <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn payment-logo-ovo">● OVO</span>
-            </div>
-            <div class="radio-circle"></div>
-          </div>
-          <div class="payment-option-txn" onclick="selectPayment('DANA', this)">
-            <div class="payment-option-left-txn">
-              <span class="payment-option-logo-txn payment-logo-dana">◉ DANA</span>
-            </div>
-            <div class="radio-circle"></div>
+          <div id="payment-options-container" role="group" aria-label="Pilih metode pembayaran">
+            <div class="empty-storefront">Memuat metode pembayaran...</div>
           </div>
 
           <div class="form-group-custom mt-3 mb-0">
-            <label class="form-label-custom">Kode Promo (Opsional)</label>
-            <div class="input-group">
-              <input type="text" id="promo_code" class="form-input-custom" placeholder="Contoh: IDULFITRI2026">
-              <button class="btn btn-outline-warning" type="button" onclick="applyPromoCode()">Apply</button>
+            <label class="form-label-custom" for="promo_code">Kode Promo (Opsional)</label>
+            <div class="input-group promo-input-group">
+              <input type="text" id="promo_code" class="form-input-custom" placeholder="Contoh: IDULFITRI2026" autocomplete="off" aria-describedby="promo_code_feedback">
+              <button class="btn btn-outline-warning" id="applyPromoButton" type="button" disabled aria-disabled="true">Apply</button>
             </div>
-            <div id="promo_code_feedback" class="small mt-2" style="color: var(--muted);"></div>
+            <div id="promo_code_feedback" class="small mt-2" style="color: var(--muted);" role="status" aria-live="polite"></div>
+            <button class="btn btn-sm btn-outline-warning mt-2" id="retryQuoteButton" type="button" hidden disabled>Coba Lagi Hitung Harga</button>
           </div>
         </div>
       </div>
@@ -1293,6 +1445,25 @@
       <!-- KEMBALI + LANJUT BAYAR -->
       <div class="txn-panel">
         <div class="txn-panel-body">
+          <div class="live-summary-card" aria-live="polite" aria-atomic="true">
+            <div class="live-summary-title">
+              <div><i class="fas fa-receipt"></i> Ringkasan Pesanan</div>
+              <span id="summary_status_label" role="status">Belum lengkap</span>
+            </div>
+            <div class="summary-row"><span class="label">Provider</span><span class="value" id="summary_provider">-</span></div>
+            <div class="summary-row"><span class="label">Nominal</span><span class="value" id="summary_item">Pilih nominal</span></div>
+            <div class="summary-row"><span class="label">Metode</span><span class="value" id="summary_method">-</span></div>
+            <div class="summary-row"><span class="label">Subtotal</span><span class="value" id="summary_base_price">Rp 0</span></div>
+            <div class="summary-row"><span class="label">Diskon Promo</span><span class="value" id="summary_discount">Rp 0</span></div>
+            <div class="summary-row"><span class="label">Biaya Pembayaran</span><span class="value" id="summary_fee">Rp 0</span></div>
+            <div class="summary-row"><span class="label">Promo Terpakai</span><span class="value" id="summary_promo">-</span></div>
+            <div class="summary-total"><span>Total Bayar</span><strong id="summary_total">Rp 0</strong></div>
+            <div class="order-trust-grid">
+              <div class="order-trust-item"><i class="fas fa-lock"></i> Aman</div>
+              <div class="order-trust-item"><i class="fas fa-sync-alt"></i> Realtime</div>
+              <div class="order-trust-item"><i class="fas fa-headset"></i> Support</div>
+            </div>
+          </div>
           <button onclick="showHome()" style="
             width:100%;padding:11px;background:transparent;
             border:1.5px solid var(--border);border-radius:8px;
@@ -1305,7 +1476,7 @@
           </button>
 
           <!-- Tombol ini memanggil validasiSebelumBeli() dari topup.js -->
-          <button onclick="validasiSebelumBeli()" class="btn-pay-custom">
+          <button id="continuePaymentButton" onclick="validasiSebelumBeli()" class="btn-pay-custom">
             LANJUTKAN PEMBAYARAN <i class="fas fa-chevron-right"></i>
           </button>
           <div class="secure-note">
@@ -1331,7 +1502,7 @@
     <div class="modal-content border-0 rounded-4 shadow-lg">
       <div class="modal-header bg-primary text-white border-0 rounded-top-4">
         <h5 class="modal-title fw-bold"><i class="bi bi-cart-check"></i> Konfirmasi Pesanan</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup konfirmasi"></button>
       </div>
       <div class="modal-body p-4">
         <p class="text-muted mb-4 text-center">Pastikan data akun dan pesanan Anda sudah benar.</p>
@@ -1352,10 +1523,16 @@
             <span class="text-muted">Pembayaran:</span><strong id="conf-method"></strong>
           </div>
           <div class="d-flex justify-content-between mb-2">
-            <span class="text-muted">Harga Produk:</span><strong id="conf-base-price"></strong>
+            <span class="text-muted">Subtotal:</span><strong id="conf-base-price"></strong>
           </div>
           <div class="d-flex justify-content-between mb-2">
-            <span class="text-muted">Biaya Admin:</span><strong id="conf-fee" class="text-danger"></strong>
+            <span class="text-muted">Diskon Promo:</span><strong id="conf-discount"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Promo Terpakai:</span><strong id="conf-promo"></strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Biaya Pembayaran:</span><strong id="conf-fee" class="text-danger"></strong>
           </div>
           <hr>
           <div class="d-flex justify-content-between">
@@ -1405,9 +1582,9 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="small text-muted mb-3">Masukkan Nomor HP atau Order ID untuk mengecek status pesanan kamu.</p>
+        <p class="small text-muted mb-3">Masukkan Order ID untuk mengecek status pesanan kamu. Order dari akun customer dapat dicek setelah login.</p>
         <div class="input-group mb-3">
-          <input type="text" id="input_cek_pesanan" class="form-control" placeholder="Contoh: 08123456789 atau ID-XXX">
+          <input type="text" id="input_cek_pesanan" class="form-control" placeholder="Contoh: ID-XXX">
           <button class="btn btn-warning fw-bold" onclick="cekStatusPesanan()">Cari</button>
         </div>
         <div id="hasil_cek_pesanan" class="d-none mt-3 p-3 rounded"></div>
@@ -1417,11 +1594,102 @@
 </div>
 
 
+<!-- MODAL: Akun Customer -->
+<div class="modal fade" id="customerAccountModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-circle text-warning"></i> Akun Customer</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="customer_auth_panel">
+          <ul class="nav nav-pills mb-3" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#customerLoginTab" type="button">Login</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#customerRegisterTab" type="button">Daftar</button></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="customerLoginTab">
+              <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">No. HP</label><input id="customer_login_phone" class="form-control" placeholder="08123456789"></div>
+                <div class="col-md-6"><label class="form-label">Password</label><input id="customer_login_password" type="password" class="form-control" placeholder="Minimal 8 karakter"></div>
+              </div>
+              <button class="btn btn-warning fw-bold mt-3" onclick="customerLogin()">Login Customer</button>
+            </div>
+            <div class="tab-pane fade" id="customerRegisterTab">
+              <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Nama</label><input id="customer_register_name" class="form-control" placeholder="Nama kamu"></div>
+                <div class="col-md-6"><label class="form-label">No. HP</label><input id="customer_register_phone" class="form-control" placeholder="08123456789"></div>
+                <div class="col-md-6"><label class="form-label">Email</label><input id="customer_register_email" type="email" class="form-control" placeholder="opsional"></div>
+                <div class="col-md-6"><label class="form-label">Password</label><input id="customer_register_password" type="password" class="form-control" placeholder="Minimal 8 karakter"></div>
+              </div>
+              <button class="btn btn-warning fw-bold mt-3" onclick="customerRegister()">Daftar Customer</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="customer_dashboard_panel" style="display:none;">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold mb-1" id="customer_account_name">Customer</h5>
+              <div class="text-muted small" id="customer_account_phone"></div>
+            </div>
+            <div class="text-end">
+              <div class="small text-muted">Saldo Wallet</div>
+              <h4 class="fw-bold text-warning mb-2" id="customer_wallet_balance">Rp 0</h4>
+              <button class="btn btn-sm btn-outline-light" onclick="customerLogout()">Logout</button>
+            </div>
+          </div>
+
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#customerOrdersTab" type="button">Riwayat</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#customerWalletTab" type="button">Wallet</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#customerSupportTab" type="button">Support</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#customerProfileTab" type="button">Profil</button></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="customerOrdersTab">
+              <div class="table-responsive"><table class="table table-dark table-hover align-middle"><thead><tr><th>Order</th><th>Produk</th><th>Total</th><th>Payment</th><th>Topup</th><th>Waktu</th><th>Aksi</th></tr></thead><tbody id="customer_order_rows"></tbody></table></div>
+            </div>
+            <div class="tab-pane fade" id="customerWalletTab">
+              <div class="alert alert-warning small d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>Isi saldo wallet dengan invoice Tripay, lalu tekan sync jika saldo belum otomatis masuk.</span>
+                <span class="d-flex gap-2">
+                  <button class="btn btn-sm btn-warning fw-bold" onclick="createWalletOpenPayment()">Buat Deposit</button>
+                  <button class="btn btn-sm btn-outline-light" onclick="syncWalletOpenPayment()">Sync Saldo</button>
+                </span>
+              </div>
+              <div class="table-responsive"><table class="table table-dark table-hover align-middle"><thead><tr><th>Tipe</th><th>Nominal</th><th>Saldo</th><th>Catatan</th><th>Waktu</th></tr></thead><tbody id="customer_wallet_rows"></tbody></table></div>
+            </div>
+            <div class="tab-pane fade" id="customerSupportTab">
+              <div class="row g-2 mb-3">
+                <div class="col-md-4"><input id="support_order_id" class="form-control" placeholder="Order ID opsional"></div>
+                <div class="col-md-4"><input id="support_subject" class="form-control" placeholder="Subjek"></div>
+                <div class="col-md-4"><button class="btn btn-warning w-100 fw-bold" onclick="createSupportTicket()">Kirim Ticket</button></div>
+                <div class="col-12"><textarea id="support_message" class="form-control" rows="3" placeholder="Ceritakan masalah transaksi kamu"></textarea></div>
+              </div>
+              <div class="table-responsive"><table class="table table-dark table-hover align-middle"><thead><tr><th>Ticket</th><th>Subjek</th><th>Status</th><th>Catatan Admin</th><th>Waktu</th></tr></thead><tbody id="customer_ticket_rows"></tbody></table></div>
+            </div>
+            <div class="tab-pane fade" id="customerProfileTab">
+              <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Nama</label><input id="customer_profile_name" class="form-control" placeholder="Nama customer"></div>
+                <div class="col-md-6"><label class="form-label">Email</label><input id="customer_profile_email" type="email" class="form-control" placeholder="email opsional"></div>
+                <div class="col-md-6"><label class="form-label">Password Baru</label><input id="customer_profile_password" type="password" class="form-control" placeholder="Kosongkan jika tidak diubah"></div>
+                <div class="col-md-6 d-flex align-items-end"><button class="btn btn-warning fw-bold w-100" onclick="saveCustomerProfile()">Simpan Profil</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ===== SCRIPTS ===== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- topup.js: backend logic tidak diubah sama sekali -->
-<script src="/web/js/topup.js?v=14"></script>
+<script src="/web/js/topup.js?v=33"></script>
 
 <script>
 /* ===================================================
@@ -1436,6 +1704,7 @@ function showHome() {
   document.getElementById("order-view").classList.remove("active");
   document.getElementById("home-view").style.display = "block";
   document.getElementById("home-view").classList.add("active");
+  if (typeof window.resetCheckoutState === 'function') window.resetCheckoutState();
   setActiveNavSection('home');
   window.scrollTo(0, 0);
 }
@@ -1465,18 +1734,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 });
-
-// --- selectPayment: OVERRIDE agar cocok dengan UI baru (.payment-option-txn) ---
-// topup.js memanggil: selectPayment(method, element)
-// UI baru menggunakan class .payment-option-txn dan .active (bukan .payment-card)
-const _origSelectPayment = window.selectPayment;
-window.selectPayment = function(method, element) {
-  // Update hidden input method (sama seperti topup.js asli)
-  document.getElementById("method").value = method;
-  // Update UI class baru
-  document.querySelectorAll(".payment-option-txn").forEach(el => el.classList.remove("active"));
-  if (element) element.classList.add("active");
-};
 
 // --- Page switcher helpers ---
 function setActiveNavSection(id) {
@@ -1602,8 +1859,8 @@ function showToastCustom(type, msg) {
   const toast = document.getElementById('toastCustom');
   const icon = document.getElementById('toastIcon');
   const msgEl = document.getElementById('toastMsg');
-  const icons = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
-  icon.textContent = icons[type] || 'ℹ️';
+  const icons = { success: 'OK', warning: '!', error: 'X', info: 'i' };
+  icon.textContent = icons[type] || 'i';
   msgEl.textContent = msg;
   toast.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
@@ -1631,6 +1888,19 @@ async function showPromoWelcomePopup() {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+    const safeMediaUrl = (value) => {
+      const raw = String(value || '').trim();
+      if (!raw || /[\\\u0000-\u001F\u007F]/.test(raw) || /^\/\//.test(raw) || /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(raw)) return '';
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return '';
+        if (parsed.origin !== window.location.origin && parsed.protocol !== 'https:') return '';
+        return parsed.origin === window.location.origin
+          ? `${parsed.pathname || '/'}${parsed.search || ''}${parsed.hash || ''}`
+          : parsed.href;
+      } catch (_) {}
+      return '';
+    };
 
     const popupPromos = promos.slice(0, 10);
     const firstPromo = popupPromos[0] || {};
@@ -1640,16 +1910,16 @@ async function showPromoWelcomePopup() {
       const safeTitle = escapeHtml(promo.title || `Promo ${idx + 1}`);
       const safeDesc = escapeHtml(promo.description || 'Promo terbatas untuk kamu, cek sekarang.');
       const safeBadge = escapeHtml(promo.badge || 'Promo');
-      const safeImage = escapeHtml(promo.image_url || '');
-      const imageSection = promo.image_url
-        ? `<img src="${safeImage}" alt="Promo" style="width:100%;max-height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(193,155,50,0.25);margin-bottom:8px;" />`
+      const safeImage = safeMediaUrl(promo.image_url);
+      const imageSection = safeImage
+        ? `<img src="${safeImage}" alt="${safeTitle}" style="width:100%;max-height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(193,155,50,0.25);margin-bottom:8px;" />`
         : '';
 
       return `<div class="promo-slide" data-index="${idx}" style="display:${idx === 0 ? 'block' : 'none'};text-align:left;padding:12px;border:1px solid rgba(193,155,50,0.22);border-radius:12px;background:rgba(255,255,255,0.02);margin-bottom:10px;">${imageSection}<div style="display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(235,193,102,0.18);color:#EBC166;font-size:11px;font-weight:700;margin-bottom:6px;">${safeBadge}</div><div style="font-size:15px;font-weight:700;color:#f6f7fb;line-height:1.35;">${safeTitle}</div><div style="font-size:12px;color:#c6ceda;line-height:1.55;margin-top:4px;">${safeDesc}</div></div>`;
     }).join('');
 
     const dotsHtml = popupPromos.map((_, idx) =>
-      `<button type="button" data-dot-index="${idx}" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;background:${idx === 0 ? '#EBC166' : 'rgba(235,193,102,0.35)'};"></button>`
+      `<button type="button" data-dot-index="${idx}" aria-label="Tampilkan promo ${idx + 1}" aria-current="${idx === 0 ? 'true' : 'false'}" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;background:${idx === 0 ? '#EBC166' : 'rgba(235,193,102,0.35)'};"></button>`
     ).join('');
 
     const sliderNavHtml = popupPromos.length > 1
@@ -1657,10 +1927,10 @@ async function showPromoWelcomePopup() {
       : '';
 
     const result = await Swal.fire({
-      title: singleMode ? (firstPromo.title || 'Promo Spesial Buat Kamu') : `${popupPromos.length} Promo Aktif Hari Ini`,
-      html: `<div style="max-height:52vh;overflow:hidden;padding-right:2px;"><div id="promoSlidesWrap">${promoSlidesHtml}</div>${sliderNavHtml}</div>`,
+      titleText: singleMode ? String(firstPromo.title || 'Promo Spesial Buat Kamu') : `${popupPromos.length} Promo Aktif Hari Ini`,
+      html: `<div style="max-height:52vh;overflow:auto;padding-right:4px;"><div id="promoSlidesWrap">${promoSlidesHtml}</div>${sliderNavHtml}</div>`,
       showCancelButton: true,
-      confirmButtonText: singleMode ? (firstPromo.cta_text || 'Pakai Promo') : 'Lihat Semua Promo',
+      confirmButtonText: escapeHtml(singleMode ? (firstPromo.cta_text || 'Pakai Promo') : 'Lihat Semua Promo'),
       cancelButtonText: 'Nanti Saja',
       allowOutsideClick: true,
       background: '#111111',
@@ -1683,6 +1953,7 @@ async function showPromoWelcomePopup() {
           });
           dots.forEach((el, dotIdx) => {
             el.style.background = dotIdx === idx ? '#EBC166' : 'rgba(235,193,102,0.35)';
+            el.setAttribute('aria-current', dotIdx === idx ? 'true' : 'false');
           });
         };
 
@@ -1711,13 +1982,10 @@ async function showPromoWelcomePopup() {
     });
 
     if (result.isConfirmed) {
-      if (singleMode && typeof window.handlePromoCta === 'function' && firstPromo.cta_url) {
-        window.handlePromoCta(firstPromo.cta_url);
+      if (singleMode && typeof window.handlePromoCta === 'function' && (firstPromo.resolved_cta_url || firstPromo.cta_url)) {
+        window.handlePromoCta(firstPromo.resolved_cta_url || firstPromo.cta_url);
       } else {
-        const targetSection = document.getElementById('produk-section');
-        if (targetSection) {
-          targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        window.location.href = '/promo/latest';
       }
     }
   } catch (err) {
