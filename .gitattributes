@@ -5,6 +5,7 @@
 *.html text eol=lf
 *.md text eol=lf
 *.json text eol=lf
+requirements.txt text eol=lf
 
 # Runtime and binary assets must never be text-normalized.
 *.png binary
