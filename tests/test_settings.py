@@ -78,6 +78,45 @@ def test_development_accepts_explicit_postgresql() -> None:
     assert settings.database_url == POSTGRES_URL
 
 
+def test_write_quiescence_defaults_to_disabled() -> None:
+    settings = Settings(_env_file=None, app_env="development", database_url=SQLITE_URL)
+
+    assert settings.write_quiescence is False
+
+
+def test_write_quiescence_is_limited_to_staging_asyncpg() -> None:
+    with pytest.raises(ValidationError, match="APP_ENV=staging"):
+        Settings(
+            _env_file=None,
+            app_env="test",
+            database_url=POSTGRES_URL,
+            **{"LIXAFA_WRITE_QUIESCENCE": True},
+        )
+
+    with pytest.raises(ValidationError, match="PostgreSQL asyncpg"):
+        Settings(
+            _env_file=None,
+            app_env="staging",
+            secret_key="staging-secret-key",
+            jwt_secret_key="staging-jwt-secret",
+            allowed_origins="https://staging.lixafa.example",
+            database_url=SQLITE_URL,
+            **{"LIXAFA_WRITE_QUIESCENCE": True},
+        )
+
+    settings = Settings(
+        _env_file=None,
+        app_env="staging",
+        secret_key="staging-secret-key",
+        jwt_secret_key="staging-jwt-secret",
+        allowed_origins="https://staging.lixafa.example",
+        database_url=POSTGRES_URL,
+        **{"LIXAFA_WRITE_QUIESCENCE": True},
+    )
+
+    assert settings.write_quiescence is True
+
+
 @pytest.mark.parametrize(
     ("app_env", "expected"),
     [

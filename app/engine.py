@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from app.core.database import get_engine
 from app.core.settings import settings
+from app.core.write_quiescence import WriteQuiescenceActive, write_quiescence
 from app.database import db_execute, db_execute_rowcount, db_query, init_db
 from app.promotions.service import (
     finalize_order_promotions,
@@ -817,6 +818,11 @@ async def reconcile_open_payment_engine() -> None:
 
 
 async def product_catalog_sync_engine() -> None:
+    async with write_quiescence.writer_section("product_catalog_sync_engine"):
+        await _product_catalog_sync_engine()
+
+
+async def _product_catalog_sync_engine() -> None:
     global _last_product_sync_at
 
     try:
@@ -1372,16 +1378,34 @@ async def reconcile_wallet_paid_orders() -> None:
 
 
 async def auto_engine_loop() -> None:
+    if write_quiescence.enabled:
+        write_quiescence.mark_engine_stopped()
+        logging.warning("Embedded engine tidak dijalankan karena staging write quiescence aktif.")
+        return
+
     while True:
         try:
-            await reconcile_wallet_paid_orders()
-            await reconcile_payment_engine()
-            await reconcile_wallet_deposit_engine()
-            await reconcile_open_payment_engine()
-            await polling_status_engine()
-            await provider_balance_watch_engine()
-            await product_catalog_sync_engine()
+            # One admission spans the whole cycle.  If a transition starts
+            # while a cycle is active, this already-admitted work drains, then
+            # the next admission is refused and the loop exits permanently.
+            async with write_quiescence.writer_section("embedded_engine_cycle"):
+                await reconcile_wallet_paid_orders()
+                await reconcile_payment_engine()
+                await reconcile_wallet_deposit_engine()
+                await reconcile_open_payment_engine()
+                await polling_status_engine()
+                await provider_balance_watch_engine()
+                await product_catalog_sync_engine()
+        except WriteQuiescenceActive:
+            write_quiescence.mark_engine_stopped()
+            logging.warning("Embedded engine berhenti karena staging write quiescence aktif.")
+            return
         except Exception as exc:
             logging.error(f"ENGINE ERROR {exc}")
+
+        if write_quiescence.enabled:
+            write_quiescence.mark_engine_stopped()
+            logging.warning("Embedded engine selesai drain dan berhenti untuk write quiescence.")
+            return
 
         await asyncio.sleep(settings.engine_poll_interval_seconds)

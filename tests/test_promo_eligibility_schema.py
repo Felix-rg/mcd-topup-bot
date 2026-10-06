@@ -4,7 +4,25 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
+
+
+@contextmanager
+def _sqlite_connection(path: Path) -> Iterator[sqlite3.Connection]:
+    """Commit/rollback and close explicitly; sqlite's context manager does not close."""
+
+    connection = sqlite3.connect(path)
+    try:
+        yield connection
+    except Exception:
+        connection.rollback()
+        raise
+    else:
+        connection.commit()
+    finally:
+        connection.close()
 
 
 class PromotionEligibilitySchemaTests(unittest.TestCase):
@@ -25,7 +43,7 @@ class PromotionEligibilitySchemaTests(unittest.TestCase):
 
         # Start with the exact pre-eligibility base table so init_db must take
         # the additive ALTER path while preserving an already-live promo row.
-        with sqlite3.connect(database_path) as connection:
+        with _sqlite_connection(database_path) as connection:
             connection.executescript(
                 """
                 CREATE TABLE promos (

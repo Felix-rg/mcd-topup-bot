@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.database import initialize_database_runtime
 from app.core.settings import settings
+from app.core.write_quiescence import WriteQuiescenceActive, write_quiescence
 from app.engine import auto_engine_loop
 from app.routes import topup_routes
 from app.routes.admin_routes import router as admin_router
@@ -29,12 +30,19 @@ async def lifespan(_: FastAPI):
         logger.critical("Startup database gagal: %s", exc)
         raise
 
-    try:
-        engine_task = asyncio.create_task(auto_engine_loop())
-        logger.info("Engine auto-polling berjalan (async).")
-    except Exception as exc:
-        logger.exception("Background engine gagal dimulai: %s", exc)
-        raise
+    if write_quiescence.enabled:
+        # Settings permits this only for staging + PostgreSQL.  Do not create a
+        # writer task at all: the health acknowledgement is emitted directly by
+        # the middleware below without entering a route or dependency.
+        write_quiescence.mark_engine_stopped()
+        logger.warning("Staging write quiescence aktif; embedded engine tidak dijalankan.")
+    else:
+        try:
+            engine_task = asyncio.create_task(auto_engine_loop())
+            logger.info("Engine auto-polling berjalan (async).")
+        except Exception as exc:
+            logger.exception("Background engine gagal dimulai: %s", exc)
+            raise
 
     yield
 
@@ -89,29 +97,65 @@ def _rate_rule_for(request: Request) -> Optional[RateRule]:
     return None
 
 
+def _write_quiescence_response() -> JSONResponse:
+    """A deterministic, non-audited maintenance response for every blocked route."""
+
+    return JSONResponse(
+        status_code=503,
+        content={
+            "success": False,
+            "code": "WRITE_QUIESCENCE_ACTIVE",
+            "message": "Staging sementara dalam pemeliharaan write-quiescence. Coba lagi nanti.",
+        },
+        headers={"Retry-After": "60", "Cache-Control": "no-store"},
+    )
+
+
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    rule = _rate_rule_for(request)
-    if not rule:
-        return await call_next(request)
+    # This branch is deliberately before rate limiting, routing, authentication,
+    # dependency injection, request parsing, audit helpers, and static mounts.
+    # In particular, it catches nominal GET endpoints that lazily create a
+    # wallet, and malformed callbacks that normally write webhook audit data.
+    if write_quiescence.enabled:
+        if request.method.upper() == "GET" and request.url.path == "/admin/health":
+            return JSONResponse(
+                status_code=200,
+                content=write_quiescence.maintenance_payload(),
+                headers={"Cache-Control": "no-store"},
+            )
+        return _write_quiescence_response()
 
-    method, path, max_requests, window_seconds = rule
-    now = time.monotonic()
-    bucket_key = f"{method}:{path}:{_client_ip(request)}"
-    bucket = _rate_limit_buckets[bucket_key]
-    while bucket and now - bucket[0] > window_seconds:
-        bucket.popleft()
+    try:
+        # Conservatively treat every normal HTTP request as a possible writer.
+        # Nested service guards are re-entrant for this request task, while a
+        # concurrent transition cannot admit another top-level request.
+        async with write_quiescence.writer_section("http_request"):
+            rule = _rate_rule_for(request)
+            if not rule:
+                return await call_next(request)
 
-    if len(bucket) >= max_requests:
-        retry_after = max(1, int(window_seconds - (now - bucket[0]))) if bucket else window_seconds
-        return JSONResponse(
-            status_code=429,
-            content={"success": False, "message": "Terlalu banyak request, coba lagi sebentar."},
-            headers={"Retry-After": str(retry_after)},
-        )
+            method, path, max_requests, window_seconds = rule
+            now = time.monotonic()
+            bucket_key = f"{method}:{path}:{_client_ip(request)}"
+            bucket = _rate_limit_buckets[bucket_key]
+            while bucket and now - bucket[0] > window_seconds:
+                bucket.popleft()
 
-    bucket.append(now)
-    return await call_next(request)
+            if len(bucket) >= max_requests:
+                retry_after = max(1, int(window_seconds - (now - bucket[0]))) if bucket else window_seconds
+                return JSONResponse(
+                    status_code=429,
+                    content={"success": False, "message": "Terlalu banyak request, coba lagi sebentar."},
+                    headers={"Retry-After": str(retry_after)},
+                )
+
+            bucket.append(now)
+            return await call_next(request)
+    except WriteQuiescenceActive:
+        # The gate may close in the narrow interval between the initial check
+        # and lease admission.  The route still has not been entered.
+        return _write_quiescence_response()
 
 
 @app.get("/")

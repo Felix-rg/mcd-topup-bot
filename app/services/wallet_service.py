@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 
 from app.core.database import get_engine
+from app.core.write_quiescence import write_quiescence
 from app.database import db_execute, db_query, init_db
 from app.services.tripay_service import parse_tripay_fee
 
@@ -41,6 +42,12 @@ def _transaction_fee(transaction: Dict[str, Any]) -> int:
 
 
 async def wallet_balance(customer_id: int) -> float:
+    # This nominal read lazily creates the account row, so it is a writer.
+    async with write_quiescence.writer_section("wallet_balance"):
+        return await _wallet_balance(customer_id)
+
+
+async def _wallet_balance(customer_id: int) -> float:
     await db_execute(
         """
         INSERT INTO wallet_accounts (customer_id, balance)
@@ -54,6 +61,30 @@ async def wallet_balance(customer_id: int) -> float:
 
 
 async def wallet_add_entry(
+    *,
+    customer_id: int,
+    entry_type: str,
+    amount: float,
+    reference_type: str,
+    reference_id: str,
+    note: str,
+    idempotency_key: Optional[str] = None,
+    actor: Optional[str] = None,
+) -> float:
+    async with write_quiescence.writer_section("wallet_add_entry"):
+        return await _wallet_add_entry(
+            customer_id=customer_id,
+            entry_type=entry_type,
+            amount=amount,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            note=note,
+            idempotency_key=idempotency_key,
+            actor=actor,
+        )
+
+
+async def _wallet_add_entry(
     *,
     customer_id: int,
     entry_type: str,
@@ -197,6 +228,11 @@ async def wallet_add_entry(
 
 
 async def credit_wallet_deposit_if_new(customer_id: int, transaction: Dict[str, Any]) -> bool:
+    async with write_quiescence.writer_section("wallet_deposit_credit"):
+        return await _credit_wallet_deposit_if_new(customer_id, transaction)
+
+
+async def _credit_wallet_deposit_if_new(customer_id: int, transaction: Dict[str, Any]) -> bool:
     reference = _transaction_reference(transaction)
     if not reference:
         return False

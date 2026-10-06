@@ -1624,7 +1624,13 @@ async def _ensure_operational_indexes(db_engine: AsyncEngine) -> None:
 def get_engine() -> AsyncEngine:
     global engine
     if engine is None:
-        engine = create_async_engine(get_database_url(), echo=False, pool_pre_ping=True)
+        engine_options: dict[str, object] = {"echo": False, "pool_pre_ping": True}
+        if settings.write_quiescence:
+            # This is a connection-local PostgreSQL safety net, not a persistent
+            # database setting.  Staging startup performs only SELECT 1, and any
+            # accidental raw write that bypasses the application fence fails.
+            engine_options["connect_args"] = {"server_settings": {"default_transaction_read_only": "on"}}
+        engine = create_async_engine(get_database_url(), **engine_options)
     return engine
 
 

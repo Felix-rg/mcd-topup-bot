@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import List
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import AliasChoices, Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     tripay_base_url: str = ""
 
     engine_poll_interval_seconds: int = 15
+    write_quiescence: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LIXAFA_WRITE_QUIESCENCE", "write_quiescence"),
+    )
 
     @field_validator("app_env")
     @classmethod
@@ -79,6 +83,11 @@ class Settings(BaseSettings):
             )
         if self.is_production and self.database_url.lower().startswith("sqlite"):
             raise ValueError("Production requires PostgreSQL and cannot use SQLite")
+        if self.write_quiescence:
+            if self.app_env != "staging":
+                raise ValueError("LIXAFA_WRITE_QUIESCENCE is permitted only when APP_ENV=staging")
+            if not self.database_url.lower().startswith("postgresql+asyncpg://"):
+                raise ValueError("LIXAFA_WRITE_QUIESCENCE requires a PostgreSQL asyncpg DATABASE_URL")
         return self
 
     @property

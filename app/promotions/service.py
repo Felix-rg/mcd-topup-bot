@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.core.database import get_engine
 from app.core.settings import settings
+from app.core.write_quiescence import write_quiescence
 from app.promotions.engine import (
     ACTIVE_REDEMPTION_STATUSES,
     EligibilityProfile,
@@ -863,6 +864,42 @@ async def persist_order_with_promotions(
     expires_at: Optional[datetime] = None,
     now: Optional[datetime] = None,
 ) -> PromotionQuote:
+    async with write_quiescence.writer_section("promotion_order_persist"):
+        return await _persist_order_with_promotions(
+            order_id=order_id,
+            product=product,
+            expected_quote=expected_quote,
+            persist_order=persist_order,
+            base_price=base_price,
+            promo_code=promo_code,
+            payment_method=payment_method,
+            phone=phone,
+            target_id=target_id,
+            customer_id=customer_id,
+            identity=identity,
+            redemption_status=redemption_status,
+            expires_at=expires_at,
+            now=now,
+        )
+
+
+async def _persist_order_with_promotions(
+    *,
+    order_id: str,
+    product: Mapping[str, Any],
+    expected_quote: PromotionQuote,
+    persist_order: PersistOrder,
+    base_price: Optional[Any] = None,
+    promo_code: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    phone: Optional[str] = None,
+    target_id: Optional[str] = None,
+    customer_id: Optional[int] = None,
+    identity: Optional[PromoIdentity] = None,
+    redemption_status: str = "RESERVED",
+    expires_at: Optional[datetime] = None,
+    now: Optional[datetime] = None,
+) -> PromotionQuote:
     """Revalidate, persist the order, and reserve quota in one DB transaction."""
 
     engine = get_engine()
@@ -941,6 +978,11 @@ async def persist_order_with_promotions(
 
 
 async def finalize_order_promotions(order_id: str) -> int:
+    async with write_quiescence.writer_section("promotion_finalize"):
+        return await _finalize_order_promotions(order_id)
+
+
+async def _finalize_order_promotions(order_id: str) -> int:
     engine = get_engine()
     async with engine.begin() as connection:
         result = await connection.execute(
@@ -960,6 +1002,11 @@ async def finalize_order_promotions(order_id: str) -> int:
 
 
 async def release_order_promotions(order_id: str, *, include_redeemed: bool = False) -> int:
+    async with write_quiescence.writer_section("promotion_release"):
+        return await _release_order_promotions(order_id, include_redeemed=include_redeemed)
+
+
+async def _release_order_promotions(order_id: str, *, include_redeemed: bool = False) -> int:
     statuses = ["RESERVED"] + (["REDEEMED"] if include_redeemed else [])
     statement = text(
         """
@@ -977,6 +1024,11 @@ async def release_order_promotions(order_id: str, *, include_redeemed: bool = Fa
 
 
 async def release_expired_reservations() -> int:
+    async with write_quiescence.writer_section("promotion_expiry_release"):
+        return await _release_expired_reservations()
+
+
+async def _release_expired_reservations() -> int:
     engine = get_engine()
     async with engine.begin() as connection:
         return await _release_expired_with_connection(connection)

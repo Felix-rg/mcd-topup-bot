@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from app.core.write_quiescence import write_quiescence
 from app.database import db_execute
 from app.services.digiflazz_service import get_digiflazz_products
 
@@ -11,6 +12,13 @@ def _truthy_provider_flag(value: Any, default: bool = True) -> bool:
 
 
 async def sync_digiflazz_products() -> Dict[str, Any]:
+    # Guard before the first provider call so direct admin/script invocation
+    # cannot reach Digiflazz or the database during the maintenance window.
+    async with write_quiescence.writer_section("catalog_sync"):
+        return await _sync_digiflazz_products()
+
+
+async def _sync_digiflazz_products() -> Dict[str, Any]:
     provider_batches: list[tuple[str, Any]] = [
         ("prepaid", await get_digiflazz_products(cmd="prepaid")),
         ("postpaid", await get_digiflazz_products(cmd="pasca")),
