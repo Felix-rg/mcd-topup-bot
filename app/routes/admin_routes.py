@@ -33,14 +33,30 @@ from app.services.digiflazz_service import (
     classify_digiflazz_transaction_response,
     create_digiflazz_deposit_ticket,
     digiflazz_response_data,
+    digiflazz_operation_allowed,
     get_digiflazz_balance,
 )
-from app.services.catalog_sync_service import sync_digiflazz_products
+from app.services.digiflazz_capabilities import (
+    DIGIFLAZZ_CAPABILITY_BALANCE_WATCH,
+    DIGIFLAZZ_CAPABILITY_DEPOSIT,
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS,
+)
 from app.services.provider_settings import (
     SECRET_PROVIDER_KEYS,
     build_provider_admin_payload,
     get_provider_runtime_settings,
     update_provider_runtime_settings,
+)
+from app.services.catalog_sync_service import (
+    CatalogSyncError,
+    apply_catalog_snapshot,
+    catalog_sync_status,
+    decide_catalog_mapping,
+    get_catalog_sync_run_detail,
+    list_catalog_logical_products,
+    list_catalog_sync_runs,
+    preview_catalog_sync,
+    provider_candidates_for_logical_product,
 )
 from app.services.product_utils import normalized_category_name, normalized_provider_name
 from app.services.order_service import calculate_admin_fee
@@ -98,6 +114,9 @@ PERMISSIONS = {
     "finance:view": "Melihat laporan omzet, profit, dan export transaksi",
     "customers:manage": "Mengelola data customer dan blacklist",
     "audit:view": "Melihat audit log admin dan webhook",
+    "catalog:preview": "Membuat preview kandidat katalog provider",
+    "catalog:review": "Mereview dan memetakan kandidat katalog provider",
+    "catalog:apply": "Menerapkan snapshot katalog yang sudah direview",
 }
 
 ROLE_PERMISSIONS = {
@@ -110,10 +129,12 @@ ROLE_PERMISSIONS = {
         "content:manage",
         "finance:view",
         "customers:manage",
+        "catalog:preview",
+        "catalog:review",
     ],
     "marketing": ["promos:manage", "content:manage"],
     "support": ["orders:view"],
-    "catalog": ["products:manage"],
+    "catalog": ["products:manage", "catalog:preview", "catalog:review"],
 }
 
 
@@ -174,6 +195,31 @@ class ProviderSettingsUpdateRequest(BaseModel):
     digiflazz_username: Optional[str] = None
     digiflazz_api_key: Optional[str] = None
     digiflazz_webhook_secret: Optional[str] = None
+
+
+class CatalogPreviewRequest(BaseModel):
+    provider: str = Field(default="digiflazz", max_length=40)
+    scope: str = Field(default="prepaid", max_length=40)
+
+
+class CatalogLogicalProductCreateRequest(BaseModel):
+    sku: str = Field(..., min_length=3, max_length=120)
+    name: str = Field(..., min_length=1, max_length=255)
+    # Keep the operator-entered selling price decimal-safe; a binary float
+    # could otherwise change a large IDR value before catalog review stores it.
+    selling_price: Decimal = Field(..., ge=0)
+    category: Optional[str] = Field(default=None, max_length=200)
+    provider_label: Optional[str] = Field(default=None, max_length=200)
+    brand: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    product_semantics: Optional[str] = Field(default=None, max_length=500)
+
+
+class CatalogMappingDecisionRequest(BaseModel):
+    decision: str = Field(..., min_length=3, max_length=40)
+    catalog_product_id: Optional[str] = Field(default=None, max_length=100)
+    create_logical_product: Optional[CatalogLogicalProductCreateRequest] = None
+    note: Optional[str] = Field(default=None, max_length=1000)
 
 
 class SitePageCreateRequest(BaseModel):
@@ -1145,6 +1191,13 @@ def _can_reconcile_digiflazz_status(order_type: Any, created_at: Any) -> bool:
     return datetime.now(timezone.utc) - created < timedelta(days=MAX_DIGIFLAZZ_PREPAID_STATUS_LOOKUP_AGE_DAYS)
 
 
+async def _require_digiflazz_operation(capability: str, message: str) -> None:
+    """Reject a manual outbound action before it can obtain an order lease."""
+
+    if not await digiflazz_operation_allowed(capability):
+        raise HTTPException(status_code=409, detail=message)
+
+
 def _promo_runtime_meta(
     *,
     starts_at: Any,
@@ -2111,6 +2164,21 @@ def _require_permission(permission: str):
     return checker
 
 
+async def _require_catalog_apply(admin: Dict[str, Any] = Depends(_require_permission("catalog:apply"))) -> Dict[str, Any]:
+    """Apply remains owner-only even if a custom role receives the label."""
+
+    if admin.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Apply katalog hanya dapat dilakukan oleh owner")
+    return admin
+
+
+def _raise_catalog_error(exc: CatalogSyncError) -> None:
+    raise HTTPException(
+        status_code=exc.http_status,
+        detail={"code": exc.code, "message": exc.safe_message},
+    )
+
+
 @router.get("/health")
 async def admin_health() -> Dict[str, Any]:
     return {"status": "ok", "service": "lixafa-admin"}
@@ -2171,7 +2239,12 @@ async def get_provider_status(_: Dict[str, Any] = Depends(_require_permission("a
     )
 
     app_base_url = settings.app_base_url.rstrip("/")
-    balance_response = await get_digiflazz_balance()
+    balance_allowed = await digiflazz_operation_allowed(DIGIFLAZZ_CAPABILITY_BALANCE_WATCH)
+    balance_response = (
+        await get_digiflazz_balance()
+        if balance_allowed
+        else {"data": {"message": "Pemeriksaan saldo Digiflazz belum diizinkan"}}
+    )
     balance_data = balance_response.get("data") if isinstance(balance_response, dict) else {}
     if not isinstance(balance_data, dict):
         balance_data = {}
@@ -2266,6 +2339,11 @@ async def update_provider_settings(
             status_code=400,
             detail="Kredensial provider hanya boleh dikonfigurasi melalui environment variables",
         )
+    if "digiflazz_product_auto_sync_enabled" in values:
+        raise HTTPException(
+            status_code=409,
+            detail="Legacy catalog auto-sync dikunci sampai Preview/Apply tersedia",
+        )
 
     await update_provider_runtime_settings(values, admin["username"])
     runtime_settings = await get_provider_runtime_settings()
@@ -2278,6 +2356,10 @@ async def update_provider_settings(
 
 @router.get("/api/provider/digiflazz/balance")
 async def admin_digiflazz_balance(_: Dict[str, Any] = Depends(_require_permission("api:monitor"))) -> Dict[str, Any]:
+    await _require_digiflazz_operation(
+        DIGIFLAZZ_CAPABILITY_BALANCE_WATCH,
+        "Pemeriksaan saldo Digiflazz belum diizinkan oleh capability gate",
+    )
     response = await get_digiflazz_balance()
     return {"success": bool(response.get("data")), "response": response}
 
@@ -2287,6 +2369,10 @@ async def admin_digiflazz_deposit(
     payload: DigiflazzDepositRequest,
     admin: Dict[str, Any] = Depends(_require_permission("api:monitor")),
 ) -> Dict[str, Any]:
+    await _require_digiflazz_operation(
+        DIGIFLAZZ_CAPABILITY_DEPOSIT,
+        "Pembuatan tiket deposit Digiflazz belum diizinkan oleh capability gate",
+    )
     response = await create_digiflazz_deposit_ticket(payload.amount, payload.bank, payload.owner_name)
     await _write_audit_log(
         admin,
@@ -2697,6 +2783,138 @@ async def admin_login(payload: AdminLoginRequest) -> Dict[str, Any]:
     }
 
 
+@router.get("/api/catalog/status")
+async def get_catalog_status(_: Dict[str, Any] = Depends(_require_permission("catalog:preview"))) -> Dict[str, Any]:
+    try:
+        return await catalog_sync_status()
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.post("/api/catalog/digiflazz/prepaid/preview")
+async def preview_digiflazz_catalog(
+    payload: CatalogPreviewRequest,
+    admin: Dict[str, Any] = Depends(_require_permission("catalog:preview")),
+) -> Dict[str, Any]:
+    try:
+        result = await preview_catalog_sync(
+            provider=payload.provider,
+            scope=payload.scope,
+            actor=str(admin.get("username") or admin.get("sub") or "admin"),
+        )
+        await _write_audit_log(
+            admin,
+            action="catalog.preview",
+            entity_type="catalog_sync_run",
+            entity_id=result["run"]["run_id"],
+            after={"operation": "PREVIEW", "status": result["run"].get("status")},
+        )
+        return result
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.get("/api/catalog/sync-runs")
+async def get_catalog_sync_runs(
+    limit: int = Query(default=50, ge=1, le=100),
+    _: Dict[str, Any] = Depends(_require_permission("catalog:preview")),
+) -> Dict[str, Any]:
+    try:
+        return await list_catalog_sync_runs(limit=limit)
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.get("/api/catalog/sync-runs/{run_id}")
+async def get_catalog_run(
+    run_id: str,
+    _: Dict[str, Any] = Depends(_require_permission("catalog:preview")),
+) -> Dict[str, Any]:
+    try:
+        return await get_catalog_sync_run_detail(run_id)
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.get("/api/catalog/logical-products")
+async def get_catalog_logical_products(
+    limit: int = Query(default=100, ge=1, le=200),
+    _: Dict[str, Any] = Depends(_require_permission("catalog:review")),
+) -> Dict[str, Any]:
+    try:
+        return await list_catalog_logical_products(limit=limit)
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.post("/api/catalog/mapping-reviews/{review_id}")
+async def decide_catalog_mapping_review(
+    review_id: str,
+    payload: CatalogMappingDecisionRequest,
+    admin: Dict[str, Any] = Depends(_require_permission("catalog:review")),
+) -> Dict[str, Any]:
+    try:
+        result = await decide_catalog_mapping(
+            review_id=review_id,
+            decision=payload.decision,
+            actor=str(admin.get("username") or admin.get("sub") or "admin"),
+            catalog_product_id=payload.catalog_product_id,
+            create_logical_product=(payload.create_logical_product.model_dump() if payload.create_logical_product else None),
+            note=payload.note,
+        )
+        await _write_audit_log(
+            admin,
+            action="catalog.mapping_decision",
+            entity_type="catalog_mapping_review",
+            entity_id=review_id,
+            after={
+                "status": result["review"].get("status"),
+                "selected_catalog_product_id": result["review"].get("selected_catalog_product_id"),
+                "created_unpublished": bool(result.get("created_logical_product")),
+            },
+        )
+        return result
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.post("/api/catalog/sync-runs/{run_id}/apply")
+async def apply_catalog_run(
+    run_id: str,
+    admin: Dict[str, Any] = Depends(_require_catalog_apply),
+) -> Dict[str, Any]:
+    try:
+        result = await apply_catalog_snapshot(
+            preview_run_id=run_id,
+            actor=str(admin.get("username") or admin.get("sub") or "admin"),
+        )
+        await _write_audit_log(
+            admin,
+            action="catalog.apply",
+            entity_type="catalog_sync_run",
+            entity_id=result["run"].get("run_id"),
+            after={
+                "source_preview_run_id": run_id,
+                "already_applied": bool(result.get("already_applied")),
+                "status": result["run"].get("status"),
+            },
+        )
+        return result
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
+@router.get("/api/catalog/products/{catalog_product_id}/provider-candidates")
+async def get_catalog_provider_candidates(
+    catalog_product_id: str,
+    _: Dict[str, Any] = Depends(_require_permission("catalog:review")),
+) -> Dict[str, Any]:
+    try:
+        return await provider_candidates_for_logical_product(catalog_product_id)
+    except CatalogSyncError as exc:
+        _raise_catalog_error(exc)
+
+
 @router.get("/api/products")
 async def get_admin_products(_: Dict[str, Any] = Depends(_require_permission("products:manage"))) -> Dict[str, Any]:
     rows = await db_query(
@@ -3084,6 +3302,10 @@ async def sync_order_provider(
             status_code=409,
             detail="Cek status Digiflazz prabayar diblokir setelah 90 hari untuk mencegah transaksi baru",
         )
+    await _require_digiflazz_operation(
+        DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS,
+        "Rekonsiliasi status Digiflazz belum diizinkan oleh capability gate",
+    )
     lease_id = await claim_provider_status_reconciliation(order_id)
     if not lease_id:
         raise HTTPException(
@@ -3226,6 +3448,10 @@ async def retry_order(
                 status_code=409,
                 detail="Cek status Digiflazz prabayar diblokir setelah 90 hari untuk mencegah transaksi baru",
             )
+        await _require_digiflazz_operation(
+            DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS,
+            "Rekonsiliasi status Digiflazz belum diizinkan oleh capability gate",
+        )
         lease_id = await claim_provider_status_reconciliation(order_id)
         if not lease_id:
             raise HTTPException(
@@ -4082,13 +4308,13 @@ async def bulk_markup(payload: BulkMarkupRequest, _: Dict[str, Any] = Depends(_r
 
 @router.post("/sync-products")
 async def sync_products(_: Dict[str, Any] = Depends(_require_permission("products:manage"))) -> Dict[str, Any]:
-    result = await sync_digiflazz_products()
-    return {
-        "success": True,
-        "message": result["message"],
-        "processed": result["processed"],
-        "errors": result["errors"],
-    }
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "legacy_catalog_sync_disabled",
+            "message": "Legacy catalog sync dinonaktifkan sampai Preview/Apply tersedia",
+        },
+    )
 
 
 @router.get("/api/promos")

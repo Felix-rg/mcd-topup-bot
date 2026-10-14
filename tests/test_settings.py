@@ -78,6 +78,40 @@ def test_development_accepts_explicit_postgresql() -> None:
     assert settings.database_url == POSTGRES_URL
 
 
+def test_staging_digiflazz_capabilities_default_to_fail_closed() -> None:
+    settings = Settings(
+        _env_file=None,
+        app_env="staging",
+        database_url=POSTGRES_URL,
+        secret_key="staging-secret-key",
+        jwt_secret_key="staging-jwt-secret",
+        allowed_origins="https://staging.lixafa.example",
+    )
+
+    assert settings.digiflazz_catalog_price_list_enabled is False
+    assert settings.digiflazz_transaction_send_enabled is False
+    assert settings.digiflazz_transaction_status_enabled is False
+    assert settings.digiflazz_balance_watch_enabled is False
+    assert settings.digiflazz_deposit_enabled is False
+
+
+def test_production_can_explicitly_enable_reviewed_digiflazz_capabilities() -> None:
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        database_url=POSTGRES_URL,
+        secret_key="prod-secret-key",
+        jwt_secret_key="prod-jwt-secret",
+        allowed_origins="https://lixafa.example",
+        digiflazz_transaction_send_enabled=True,
+        digiflazz_transaction_status_enabled=True,
+    )
+
+    assert settings.digiflazz_transaction_send_enabled is True
+    assert settings.digiflazz_transaction_status_enabled is True
+    assert settings.digiflazz_catalog_price_list_enabled is False
+
+
 @pytest.mark.parametrize(
     ("app_env", "expected"),
     [

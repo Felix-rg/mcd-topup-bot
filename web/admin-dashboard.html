@@ -41,6 +41,7 @@
                     <a class="nav-link" data-permission="orders:view" onclick="loadOrders()" id="nav-orders"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
                     <a class="nav-link" data-permission="finance:view" onclick="loadReports()" id="nav-reports"><i class="bi bi-bar-chart-line me-2"></i> Laporan</a>
                     <a class="nav-link" data-permission="products:manage" onclick="loadProducts()" id="nav-products"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                    <a class="nav-link" data-permission="catalog:preview" onclick="loadCatalog()" id="nav-catalog"><i class="bi bi-diagram-2 me-2"></i> Catalog Provider</a>
                     <a class="nav-link" data-permission="promos:manage" onclick="loadPromos()" id="nav-promos"><i class="bi bi-badge-ad me-2"></i> Promo</a>
                     <a class="nav-link" data-permission="customers:manage" onclick="loadCustomers()" id="nav-customers"><i class="bi bi-person-lines-fill me-2"></i> Customer</a>
                     <a class="nav-link" data-permission="admins:manage" onclick="loadAdmins()" id="nav-admins"><i class="bi bi-people me-2"></i> Akun Admin</a>
@@ -69,6 +70,7 @@
                         <a class="nav-link text-white mb-2" data-permission="orders:view" onclick="loadOrders()" data-bs-dismiss="offcanvas"><i class="bi bi-cart-check me-2"></i> Transaksi</a>
                         <a class="nav-link text-white mb-2" data-permission="finance:view" onclick="loadReports()" data-bs-dismiss="offcanvas"><i class="bi bi-bar-chart-line me-2"></i> Laporan</a>
                         <a class="nav-link text-white mb-2" data-permission="products:manage" onclick="loadProducts()" data-bs-dismiss="offcanvas"><i class="bi bi-box-seam me-2"></i> Produk</a>
+                        <a class="nav-link text-white mb-2" data-permission="catalog:preview" onclick="loadCatalog()" data-bs-dismiss="offcanvas"><i class="bi bi-diagram-2 me-2"></i> Catalog Provider</a>
                         <a class="nav-link text-white mb-2" data-permission="promos:manage" onclick="loadPromos()" data-bs-dismiss="offcanvas"><i class="bi bi-badge-ad me-2"></i> Promo</a>
                         <a class="nav-link text-white mb-2" data-permission="customers:manage" onclick="loadCustomers()" data-bs-dismiss="offcanvas"><i class="bi bi-person-lines-fill me-2"></i> Customer</a>
                         <a class="nav-link text-white mb-2" data-permission="admins:manage" onclick="loadAdmins()" data-bs-dismiss="offcanvas"><i class="bi bi-people me-2"></i> Akun Admin</a>
@@ -145,8 +147,8 @@
 
                 <!-- Tombol Tambah Produk (Akan disembunyikan pakai JS kalau di menu Transaksi) -->
                 <div id="product_actions" class="mb-3 text-end" style="display: none;">
-                    <button id="btnSync" class="btn btn-success shadow-sm me-2">
-                        <i class="bi bi-arrow-repeat"></i> Tarik Data Digiflazz
+                    <button id="btnSync" class="btn btn-secondary shadow-sm me-2" disabled title="Legacy sync dikunci sampai Preview/Apply katalog tersedia">
+                        <i class="bi bi-shield-lock"></i> Catalog Sync Dikunci
                     </button>
                     <button class="btn btn-warning shadow-sm me-2" onclick="showBulkMarkupModal()">
                         <i class="bi bi-tags"></i> Set Profit Massal
@@ -191,6 +193,12 @@
 
                 <div id="product_container" style="display: none;">
                     </div>
+
+                <div id="catalog_container" style="display: none;">
+                    <div class="dashboard-panel p-4">
+                        <div class="text-center p-4 text-muted">Memuat status catalog provider...</div>
+                    </div>
+                </div>
 
                 <div id="promo_container" style="display: none;">
                     <div class="table-custom p-3">
@@ -1055,6 +1063,6 @@
 
     <!-- Wajib untuk fungsionalitas Modal Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/web/js/dashboard.js?v=promo-eligibility-20260720-1"></script>
+    <script src="/web/js/dashboard.js?v=catalog-phase2-20261013-1"></script>
 </body>
 </html>

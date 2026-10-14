@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     digiflazz_api_key: str = ""
     digiflazz_webhook_secret: str = ""
     digiflazz_base_url: str = "https://api.digiflazz.com/v1"
+    # Every outbound Digiflazz operation is opt-in.  These settings are read
+    # only from the trusted process environment; provider runtime overrides
+    # stored in the database cannot enable them.
+    digiflazz_catalog_price_list_enabled: bool = False
+    digiflazz_transaction_send_enabled: bool = False
+    digiflazz_transaction_status_enabled: bool = False
+    digiflazz_balance_watch_enabled: bool = False
+    digiflazz_deposit_enabled: bool = False
 
     default_admin_username: str = "admin"
     default_admin_password: str = ""

@@ -30,6 +30,12 @@ let adminState = [];
 let pageState = [];
 let currentAdmin = null;
 let currentSiteName = "LIXAFA PROJEK";
+const catalogState = {
+    status: null,
+    runs: [],
+    activeRun: null,
+    logicalProducts: []
+};
 const APP_TIME_ZONE = "Asia/Jakarta";
 const PROMO_CUSTOMER_SEGMENT_DEFAULTS = [
     { value: "all", label: "Semua pelanggan", description: "Promo dapat digunakan oleh guest maupun member yang login.", aliases: ["all_customers"] },
@@ -93,11 +99,11 @@ const promoEligibilityStates = new Map();
 let promoEligibilityConditionSequence = 0;
 
 let rolePermissions = {
-    owner: ["orders:view", "orders:manage", "products:manage", "promos:manage", "admins:manage", "content:manage", "settings:manage", "api:monitor", "finance:view", "customers:manage", "audit:view"],
-    manager: ["orders:view", "orders:manage", "products:manage", "promos:manage", "content:manage", "finance:view", "customers:manage"],
+    owner: ["orders:view", "orders:manage", "products:manage", "promos:manage", "admins:manage", "content:manage", "settings:manage", "api:monitor", "finance:view", "customers:manage", "audit:view", "catalog:preview", "catalog:review", "catalog:apply"],
+    manager: ["orders:view", "orders:manage", "products:manage", "promos:manage", "content:manage", "finance:view", "customers:manage", "catalog:preview", "catalog:review"],
     marketing: ["promos:manage", "content:manage"],
     support: ["orders:view"],
-    catalog: ["products:manage"]
+    catalog: ["products:manage", "catalog:preview", "catalog:review"]
 };
 
 let permissionLabels = {
@@ -111,7 +117,10 @@ let permissionLabels = {
     "api:monitor": "Melihat status API Tripay, Digiflazz, dan engine transaksi",
     "finance:view": "Melihat laporan dan export transaksi",
     "customers:manage": "Mengelola customer dan blacklist",
-    "audit:view": "Melihat audit log admin"
+    "audit:view": "Melihat audit log admin",
+    "catalog:preview": "Membuat preview kandidat katalog provider",
+    "catalog:review": "Mereview dan memetakan kandidat katalog provider",
+    "catalog:apply": "Menerapkan snapshot katalog yang sudah direview"
 };
 
 const roleLabels = {
@@ -125,6 +134,7 @@ const roleLabels = {
 const viewOrder = [
     { permission: "orders:view", loader: () => window.loadOrders() },
     { permission: "finance:view", loader: () => window.loadReports() },
+    { permission: "catalog:preview", loader: () => window.loadCatalog() },
     { permission: "products:manage", loader: () => window.loadProducts() },
     { permission: "promos:manage", loader: () => window.loadPromos() },
     { permission: "customers:manage", loader: () => window.loadCustomers() },
@@ -587,6 +597,7 @@ function hideWorkspace() {
     [
         "order_container",
         "product_container",
+        "catalog_container",
         "promo_container",
         "admin_container",
         "page_container",
@@ -1333,6 +1344,221 @@ window.deleteProduct = async function(sku) {
         window.loadProducts();
     } catch (error) {
         showError(error, "Gagal menghapus produk.");
+    }
+};
+
+function catalogValue(value, fallback = "-") {
+    const text = value === null || value === undefined || value === "" ? fallback : String(value);
+    return escapeHtml(text);
+}
+
+function catalogStatusBadge(status) {
+    const value = String(status || "UNKNOWN").toUpperCase();
+    const style = value === "APPLIED" || value === "PREVIEW_READY" || value === "AVAILABLE"
+        ? "bg-success"
+        : (value === "FAILED" || value === "REJECTED" || value === "UNAVAILABLE" ? "bg-danger" : "bg-secondary");
+    return `<span class="badge ${style}">${catalogValue(value)}</span>`;
+}
+
+function renderCatalogWorkspace() {
+    const container = byId("catalog_container");
+    if (!container) return;
+    const status = catalogState.status || {};
+    const runs = catalogState.runs || [];
+    const previewAllowed = hasPermission("catalog:preview");
+    const applyAllowed = hasPermission("catalog:apply");
+    const lastPreview = status.last_preview || {};
+    const statusCards = [
+        ["Preview terakhir", lastPreview.run_id || "Belum ada", lastPreview.status || "-"],
+        ["Apply berhasil", status.last_successful_run_id || "Belum ada", status.last_success_at || "-"],
+        ["Preview berikutnya", status.next_allowed_at || "Sekarang", status.last_failure_code || "Aman"]
+    ].map(([label, value, detail]) => `
+        <div class="col-md-4 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <div class="small text-muted">${catalogValue(label)}</div>
+            <div class="fw-semibold text-break">${catalogValue(value)}</div>
+            <div class="small text-muted text-break">${catalogValue(detail)}</div>
+        </div></div></div>`).join("");
+    const runRows = runs.map((run) => `
+        <tr>
+            <td><code>${catalogValue(run.run_id)}</code><div class="small text-muted">${catalogValue(run.operation)}</div></td>
+            <td>${catalogStatusBadge(run.status)}</td>
+            <td>${catalogValue(run.received_count, "0")} / ${catalogValue(run.valid_count, "0")}</td>
+            <td>${catalogValue(run.review_required_count, "0")}</td>
+            <td class="small">${catalogValue(run.finished_at || run.started_at)}</td>
+            <td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="openCatalogRun('${escapeJs(run.run_id)}')">Detail</button></td>
+        </tr>`).join("") || `<tr><td colspan="6" class="text-center text-muted py-4">Belum ada preview katalog.</td></tr>`;
+    const active = catalogState.activeRun;
+    container.innerHTML = `
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div><p class="text-muted mb-0">Preview hanya menyimpan kandidat provider. Apply tidak mengaktifkan produk, mengubah harga jual, atau memilih supplier checkout.</p></div>
+            <button class="btn btn-primary" ${previewAllowed ? "" : "disabled"} onclick="previewDigiflazzCatalog()"><i class="bi bi-eye me-1"></i> Preview Digiflazz</button>
+        </div>
+        <div class="row">${statusCards}</div>
+        ${status.safe_failure_summary ? `<div class="alert alert-warning small">Status provider terakhir: ${catalogValue(status.safe_failure_summary)}</div>` : ""}
+        <div class="card border-0 shadow-sm mb-3"><div class="card-header bg-white d-flex justify-content-between align-items-center"><strong>Snapshot Catalog</strong><button class="btn btn-sm btn-outline-secondary" onclick="loadCatalog()">Refresh</button></div>
+            <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Run</th><th>Status</th><th>Data</th><th>Review</th><th>Waktu</th><th></th></tr></thead><tbody>${runRows}</tbody></table></div>
+        </div>
+        ${active ? renderCatalogRunDetail(active, applyAllowed) : ""}`;
+}
+
+function renderCatalogRunDetail(detail, applyAllowed) {
+    const run = detail.run || {};
+    const itemRows = (detail.items || []).map((item) => {
+        const review = item.review || {};
+        const changedFields = Array.isArray(item.diff?.changed_fields)
+            ? item.diff.changed_fields.map((field) => catalogValue(field, "")).filter(Boolean)
+            : [];
+        const diffSummary = changedFields.length
+            ? `<div class="small text-muted">Diff: ${changedFields.join(", ")}</div>`
+            : "";
+        const reviewControls = item.requires_review && review.review_id && hasPermission("catalog:review")
+            ? `<div class="btn-group btn-group-sm mt-1" role="group">
+                    <button class="btn btn-outline-primary" onclick="attachCatalogCandidate('${escapeJs(review.review_id)}')">Attach</button>
+                    <button class="btn btn-outline-secondary" onclick="createCatalogLogicalProduct('${escapeJs(review.review_id)}')">Buat Draft</button>
+                    <button class="btn btn-outline-danger" onclick="rejectCatalogCandidate('${escapeJs(review.review_id)}')">Tolak</button>
+                </div>`
+            : "";
+        return `<tr>
+            <td><code>${catalogValue(item.provider_sku)}</code><div class="small text-muted">${catalogValue(item.product_name)}</div></td>
+            <td>${catalogValue(item.brand)}<div class="small text-muted">${catalogValue(item.category)} / ${catalogValue(item.type)}</div></td>
+            <td>${catalogValue(item.cost_price)}<div class="small">${catalogStatusBadge(item.availability_state)}</div></td>
+            <td>${catalogStatusBadge(item.proposed_action)}<div class="small text-muted">${catalogValue((item.reason_codes || []).join(", "), "")}</div>${diffSummary}</td>
+            <td><code>${catalogValue((review.selected_catalog_product_id || item.catalog_product_id), "-")}</code><div>${review.status ? catalogStatusBadge(review.status) : ""}</div>${reviewControls}</td>
+        </tr>`;
+    }).join("") || `<tr><td colspan="5" class="text-center text-muted py-3">Snapshot tidak memiliki item.</td></tr>`;
+    const canApply = Boolean(detail.can_apply && applyAllowed);
+    const blockers = (detail.blocked_reasons || []).map(catalogValue).join(", ");
+    return `<div class="card border-0 shadow-sm mt-3"><div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div><strong>Detail Snapshot</strong> <code class="text-warning">${catalogValue(run.run_id)}</code></div>
+            <div><button class="btn btn-sm ${canApply ? "btn-success" : "btn-outline-light"}" ${canApply ? "" : "disabled"} onclick="applyCatalogRun('${escapeJs(run.run_id)}')">Apply reviewed snapshot</button></div>
+        </div>
+        <div class="card-body pb-0"><div class="small text-muted mb-3">Hash: <code>${catalogValue(run.snapshot_hash)}</code>${blockers ? ` — Apply diblokir: ${blockers}` : ""}</div></div>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Candidate</th><th>Semantik</th><th>Cost / Status</th><th>Aksi Preview</th><th>Mapping</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+    </div>`;
+}
+
+window.loadCatalog = async function() {
+    if (!ensurePermission("catalog:preview")) return;
+    hideWorkspace();
+    setActiveMenu("nav-catalog");
+    byId("page-title").innerText = "Catalog Provider";
+    const search = document.querySelector(".admin-search-row");
+    if (search) search.style.display = "none";
+    const container = byId("catalog_container");
+    container.style.display = "block";
+    container.innerHTML = `<div class="dashboard-panel p-4 text-center"><div class="spinner-border text-warning"></div><div class="mt-2">Memuat status catalog...</div></div>`;
+    try {
+        const [status, runs] = await Promise.all([
+            api("/admin/api/catalog/status"),
+            api("/admin/api/catalog/sync-runs?limit=30")
+        ]);
+        catalogState.status = status;
+        catalogState.runs = runs.items || [];
+        catalogState.activeRun = null;
+        renderCatalogWorkspace();
+    } catch (error) {
+        container.innerHTML = `<div class="alert alert-danger">Gagal memuat catalog provider.</div>`;
+        showError(error, "Gagal memuat catalog provider.");
+    }
+};
+
+window.previewDigiflazzCatalog = async function() {
+    if (!ensurePermission("catalog:preview")) return;
+    if (!confirm("Ambil satu snapshot price-list prepaid Digiflazz? Ini tidak akan menerbitkan produk atau menjalankan transaksi.")) return;
+    try {
+        await api("/admin/api/catalog/digiflazz/prepaid/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider: "digiflazz", scope: "prepaid" })
+        });
+        await window.loadCatalog();
+    } catch (error) {
+        showError(error, "Preview catalog gagal.");
+    }
+};
+
+window.openCatalogRun = async function(runId) {
+    if (!ensurePermission("catalog:preview")) return;
+    try {
+        catalogState.activeRun = await api(`/admin/api/catalog/sync-runs/${encodeURIComponent(runId)}`);
+        renderCatalogWorkspace();
+    } catch (error) {
+        showError(error, "Detail snapshot catalog gagal dimuat.");
+    }
+};
+
+async function catalogLogicalProductChoices() {
+    if (!hasPermission("catalog:review")) return [];
+    const response = await api("/admin/api/catalog/logical-products?limit=100");
+    catalogState.logicalProducts = response.items || [];
+    return catalogState.logicalProducts;
+}
+
+window.attachCatalogCandidate = async function(reviewId) {
+    if (!ensurePermission("catalog:review")) return;
+    try {
+        const products = await catalogLogicalProductChoices();
+        const choices = products.slice(0, 20).map((product) => `${product.catalog_product_id} | ${product.sku} | ${product.name}`).join("\n");
+        const selected = prompt(`Masukkan Catalog Product ID untuk attach kandidat.\n\nPilihan awal:\n${choices}`);
+        if (!selected) return;
+        await api(`/admin/api/catalog/mapping-reviews/${encodeURIComponent(reviewId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ decision: "attach_existing", catalog_product_id: selected.trim() })
+        });
+        if (catalogState.activeRun) await window.openCatalogRun(catalogState.activeRun.run.run_id);
+    } catch (error) {
+        showError(error, "Mapping kandidat gagal disimpan.");
+    }
+};
+
+window.createCatalogLogicalProduct = async function(reviewId) {
+    if (!ensurePermission("catalog:review")) return;
+    const sku = prompt("SKU logical product baru (draft, unpublished):");
+    if (!sku) return;
+    const name = prompt("Nama logical product:");
+    if (!name) return;
+    const sellingPrice = prompt("Harga jual customer (ditetapkan admin, bukan harga provider):");
+    if (sellingPrice === null || sellingPrice.trim() === "") return;
+    const category = prompt("Kategori logical product (opsional):") || "Uncategorized";
+    try {
+        await api(`/admin/api/catalog/mapping-reviews/${encodeURIComponent(reviewId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                decision: "create_unpublished",
+                create_logical_product: { sku, name, selling_price: Number(sellingPrice), category }
+            })
+        });
+        if (catalogState.activeRun) await window.openCatalogRun(catalogState.activeRun.run.run_id);
+    } catch (error) {
+        showError(error, "Logical product draft gagal dibuat.");
+    }
+};
+
+window.rejectCatalogCandidate = async function(reviewId) {
+    if (!ensurePermission("catalog:review")) return;
+    const note = prompt("Alasan penolakan kandidat (opsional):") || "";
+    try {
+        await api(`/admin/api/catalog/mapping-reviews/${encodeURIComponent(reviewId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ decision: "reject", note })
+        });
+        if (catalogState.activeRun) await window.openCatalogRun(catalogState.activeRun.run.run_id);
+    } catch (error) {
+        showError(error, "Penolakan kandidat gagal disimpan.");
+    }
+};
+
+window.applyCatalogRun = async function(runId) {
+    if (!ensurePermission("catalog:apply")) return;
+    if (!confirm("Apply snapshot yang sudah direview? Aksi ini hanya menyimpan kandidat provider dan mapping; produk tetap unpublished kecuali admin mengaktifkannya terpisah.")) return;
+    try {
+        await api(`/admin/api/catalog/sync-runs/${encodeURIComponent(runId)}/apply`, { method: "POST" });
+        await window.loadCatalog();
+    } catch (error) {
+        showError(error, "Apply snapshot catalog gagal.");
     }
 };
 
@@ -4696,7 +4922,6 @@ function renderProviderCard(provider, icon) {
                 <span class="status-dot ${configured ? "ok" : ""}" title="${configured ? "Aktif" : "Belum lengkap"}"></span>
             </div>
             ${renderConfigRows(provider.credentials || [])}
-            ${provider.username ? `<div class="config-row"><span>Username</span><strong>${escapeHtml(provider.username)}</strong></div>` : ""}
             ${provider.mode ? `<div class="config-row"><span>Mode</span><strong>${escapeHtml(provider.mode)}</strong></div>` : ""}
             ${provider.callback_url ? `<div class="config-row"><span>Callback</span><code class="small">${escapeHtml(provider.callback_url)}</code></div>` : ""}
         </div>`;
@@ -4780,10 +5005,6 @@ function renderApiSettings(data) {
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Username</label>
-                        <input type="text" id="api_digiflazz_username" class="form-control" value="${escapeHtml(digiflazz.username || "")}">
-                    </div>
-                    <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Max Price Margin (%)</label>
                         <input type="number" id="api_digiflazz_max_price_margin_percent" min="0" max="100" class="form-control" value="${Number(data.digiflazz_max_price_margin_percent || 10)}">
                     </div>
@@ -4794,7 +5015,7 @@ function renderApiSettings(data) {
                         </div>
                     </div>
                 </div>
-                <p class="small text-muted mb-0">API key dan webhook secret Digiflazz dikelola melalui environment variables dan tidak disimpan dari dashboard.</p>
+                <p class="small text-muted mb-0">Username, API key, dan webhook secret Digiflazz dikelola melalui environment variables dan tidak dapat ditampilkan atau diubah dari dashboard.</p>
             </div>
 
             <div class="api-settings-card d-flex flex-column justify-content-between">
@@ -4943,10 +5164,10 @@ function renderOperationalChecklist(data) {
         {
             icon: "bi-box-seam",
             title: "Produk",
-            status: "Sinkron rutin",
-            badge: "bg-info text-dark",
-            note: "Tarik prepaid dan postpaid dari Digiflazz, lalu cek markup.",
-            action: `<button class="btn btn-sm btn-outline-primary" onclick="syncProviderProducts()">Sync Produk</button>`
+            status: "Sync dikunci",
+            badge: "bg-secondary",
+            note: "Legacy sync dikunci sampai Preview/Apply katalog tersedia.",
+            action: `<span class="text-muted small"><i class="bi bi-shield-lock"></i> Preview/Apply menyusul</span>`
         },
         {
             icon: "bi-inbox",
@@ -5061,8 +5282,7 @@ function collectProviderSettingsPayload() {
         digiflazz_max_price_margin_percent: Number(inputValue("api_digiflazz_max_price_margin_percent") || 10),
         digiflazz_low_balance_threshold: Number(inputValue("api_digiflazz_low_balance_threshold") || 50000),
         tripay_base_url: inputValue("api_tripay_base_url"),
-        digiflazz_base_url: inputValue("api_digiflazz_base_url"),
-        digiflazz_username: inputValue("api_digiflazz_username")
+        digiflazz_base_url: inputValue("api_digiflazz_base_url")
     };
 
     return payload;
@@ -5111,14 +5331,7 @@ window.refreshDigiflazzBalance = async function() {
 
 window.syncProviderProducts = async function() {
     if (!ensurePermission("products:manage")) return;
-    if (!confirm("Tarik data produk terbaru dari Digiflazz?")) return;
-    try {
-        const res = await api("/admin/sync-products", { method: "POST" });
-        alert(res.message || "Sinkronisasi produk selesai.");
-        await window.loadApiMonitor();
-    } catch (error) {
-        showError(error, "Gagal sinkronisasi produk.");
-    }
+    alert("Legacy catalog sync dikunci sampai Preview/Apply katalog tersedia.");
 };
 
 window.createDigiflazzDeposit = async function() {
@@ -5330,23 +5543,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const btnSync = byId("btnSync");
     if (btnSync) {
-        btnSync.addEventListener("click", async function() {
-            if (!ensurePermission("products:manage")) return;
-            if (!confirm("Tarik data dari Digiflazz?")) return;
-            const originalText = this.innerHTML;
-            this.disabled = true;
-            this.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Loading...`;
-            try {
-                const res = await api("/admin/sync-products", { method: "POST" });
-                alert(res.message || "Sinkronisasi selesai.");
-                window.loadProducts();
-            } catch (error) {
-                showError(error, "Gagal sinkronisasi produk.");
-            } finally {
-                this.disabled = false;
-                this.innerHTML = originalText;
-            }
-        });
+        btnSync.disabled = true;
+        btnSync.title = "Legacy sync dikunci sampai Preview/Apply katalog tersedia";
     }
 
     await applyBranding();

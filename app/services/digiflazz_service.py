@@ -4,7 +4,14 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from app.config import DIGIFLAZZ_API_KEY, DIGIFLAZZ_BASE_URL, DIGIFLAZZ_USERNAME
+from app.services.digiflazz_capabilities import (
+    DIGIFLAZZ_CAPABILITY_BALANCE_WATCH,
+    DIGIFLAZZ_CAPABILITY_CATALOG_PRICE_LIST,
+    DIGIFLAZZ_CAPABILITY_DEPOSIT,
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND,
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS,
+    is_digiflazz_capability_enabled,
+)
 from app.services.provider_settings import get_digiflazz_config
 
 
@@ -34,6 +41,29 @@ _DIGIFLAZZ_DEFINITIVE_FAILURE_CODES = frozenset(
     }
 )
 _DIGIFLAZZ_AMBIGUOUS_FAILURE_CODES = frozenset({"01", "49", "70"})
+
+_SENSITIVE_RESPONSE_KEYS = frozenset(
+    {
+        "api_key",
+        "apikey",
+        "authorization",
+        "password",
+        "secret",
+        "signature",
+        "sign",
+        "token",
+        "username",
+        "webhook_secret",
+    }
+)
+
+_CAPABILITY_MESSAGES = {
+    DIGIFLAZZ_CAPABILITY_CATALOG_PRICE_LIST: "Akses price-list Digiflazz belum diizinkan",
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND: "Pengiriman transaksi Digiflazz belum diizinkan",
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS: "Status atau inquiry Digiflazz belum diizinkan",
+    DIGIFLAZZ_CAPABILITY_BALANCE_WATCH: "Pemeriksaan saldo Digiflazz belum diizinkan",
+    DIGIFLAZZ_CAPABILITY_DEPOSIT: "Pembuatan tiket deposit Digiflazz belum diizinkan",
+}
 
 
 def digiflazz_response_data(response: Any) -> Dict[str, Any]:
@@ -85,23 +115,77 @@ def classify_digiflazz_transaction_response(response: Any) -> str:
 async def _runtime_config() -> Dict[str, str]:
     config = await get_digiflazz_config()
     return {
-        "username": config.get("username") or DIGIFLAZZ_USERNAME,
-        "api_key": config.get("api_key") or DIGIFLAZZ_API_KEY,
-        "base_url": (config.get("base_url") or DIGIFLAZZ_BASE_URL).rstrip("/"),
+        "username": str(config.get("username") or "").strip(),
+        "api_key": str(config.get("api_key") or "").strip(),
+        "base_url": str(config.get("base_url") or "").rstrip("/"),
     }
+
+
+def _not_sent_response(message: str, error_type: str) -> Dict[str, Any]:
+    """Return a safe pre-send failure that cannot be mistaken for an HTTP attempt."""
+
+    return {
+        "data": {"message": message, "rc": "99"},
+        "_provider_outcome": "NOT_SENT",
+        "_error_type": error_type,
+    }
+
+
+async def _prepare_digiflazz_operation(capability: str) -> tuple[Optional[Dict[str, str]], Optional[Dict[str, Any]]]:
+    """Check the environment-only capability and complete outbound credentials.
+
+    This helper intentionally runs before signing or constructing a provider
+    payload.  A denied operation is therefore provably NOT_SENT.
+    """
+
+    if not is_digiflazz_capability_enabled(capability):
+        return None, _not_sent_response(
+            _CAPABILITY_MESSAGES[capability],
+            "DigiflazzCapabilityDisabled",
+        )
+
+    config = await _runtime_config()
+    if not config["username"] or not config["api_key"]:
+        return None, _not_sent_response(
+            "Konfigurasi Digiflazz belum lengkap",
+            "DigiflazzConfigurationIncomplete",
+        )
+    return config, None
+
+
+async def digiflazz_operation_allowed(capability: str) -> bool:
+    """Return whether an outbound operation may start without exposing config."""
+
+    _config, blocked = await _prepare_digiflazz_operation(capability)
+    return blocked is None
+
+
+def _redact_sensitive_provider_response(value: Any) -> Any:
+    """Prevent a provider echo from carrying credential fields into storage/API."""
+
+    if isinstance(value, list):
+        return [_redact_sensitive_provider_response(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+
+    sanitized: Dict[str, Any] = {}
+    for key, item in value.items():
+        normalized_key = str(key).strip().lower().replace("-", "_")
+        if normalized_key in _SENSITIVE_RESPONSE_KEYS:
+            sanitized[str(key)] = "[redacted]"
+        else:
+            sanitized[str(key)] = _redact_sensitive_provider_response(item)
+    return sanitized
 
 
 async def _call_digiflazz(payload: Dict[str, Any], endpoint: str, base_url: str, timeout: float = 15.0) -> Dict[str, Any]:
     if not payload.get("username") or not payload.get("sign"):
-        return {
-            "data": {"message": "Konfigurasi Digiflazz belum lengkap", "rc": "99"},
-            "_provider_outcome": "NOT_SENT",
-        }
+        return _not_sent_response("Konfigurasi Digiflazz belum lengkap", "DigiflazzConfigurationIncomplete")
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(f"{base_url}/{endpoint}", json=payload)
-            result = response.json()
+            result = _redact_sensitive_provider_response(response.json())
             if isinstance(result, dict):
                 result.setdefault("_provider_outcome", "RESPONDED")
             return result
@@ -131,16 +215,13 @@ async def kirim_digiflazz(
     callback_url: Optional[str] = None,
     testing: bool = False,
 ) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
-
-    if not username or not api_key:
-        return {
-            "data": {"message": "Konfigurasi Digiflazz belum lengkap", "rc": "99"},
-            "_provider_outcome": "NOT_SENT",
-        }
 
     payload = {
         "username": username,
@@ -159,16 +240,13 @@ async def kirim_digiflazz(
 
 
 async def cek_status_digiflazz(sku: str, tujuan: str, ref_id: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
-
-    if not username or not api_key:
-        return {
-            "data": {"message": "Konfigurasi Digiflazz belum lengkap", "rc": "99"},
-            "_provider_outcome": "NOT_SENT",
-        }
 
     payload = {
         "username": username,
@@ -181,13 +259,13 @@ async def cek_status_digiflazz(sku: str, tujuan: str, ref_id: str) -> Dict[str, 
 
 
 async def get_digiflazz_balance() -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_BALANCE_WATCH)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
-
-    if not username or not api_key:
-        return {"data": {"message": "Konfigurasi Digiflazz belum lengkap", "rc": "99"}}
 
     payload = {
         "cmd": "deposit",
@@ -198,13 +276,13 @@ async def get_digiflazz_balance() -> Dict[str, Any]:
 
 
 async def create_digiflazz_deposit_ticket(amount: int, bank: str, owner_name: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_DEPOSIT)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
-
-    if not username or not api_key:
-        return {"data": {"message": "Konfigurasi Digiflazz belum lengkap", "rc": "99"}}
 
     payload = {
         "username": username,
@@ -224,13 +302,14 @@ async def get_digiflazz_products(
     brand: Optional[str] = None,
     product_type: Optional[str] = None,
 ) -> Any:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_CATALOG_PRICE_LIST)
+    if blocked:
+        logger.info("Digiflazz price-list diblokir error_type=%s", blocked.get("_error_type"))
+        return str((blocked.get("data") or {}).get("message") or "Akses price-list Digiflazz belum diizinkan")
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
-
-    if not username or not api_key:
-        return "Konfigurasi Digiflazz belum lengkap"
 
     payload = {
         "cmd": cmd,
@@ -249,15 +328,14 @@ async def get_digiflazz_products(
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(f"{base_url}/price-list", json=payload)
-            data = response.json()
+            data = _redact_sensitive_provider_response(response.json())
 
-            products = data.get("data")
+            products = data.get("data") if isinstance(data, dict) else None
             if isinstance(products, list):
                 return products
             if isinstance(products, dict):
-                error_msg = products.get("message", "Format data salah")
                 logger.warning("Digiflazz menolak sinkronisasi katalog")
-                return error_msg
+                return "Digiflazz menolak permintaan price-list"
             return "Format data salah"
     except Exception as exc:
         logger.warning("Sinkronisasi katalog Digiflazz gagal error_type=%s", type(exc).__name__)
@@ -265,7 +343,10 @@ async def get_digiflazz_products(
 
 
 async def inquiry_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
@@ -282,7 +363,10 @@ async def inquiry_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[str,
 
 
 async def pay_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
@@ -299,7 +383,10 @@ async def pay_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[str, Any
 
 
 async def cek_status_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]
@@ -316,7 +403,10 @@ async def cek_status_postpaid(sku: str, customer_no: str, ref_id: str) -> Dict[s
 
 
 async def inquiry_pln(customer_no: str) -> Dict[str, Any]:
-    config = await _runtime_config()
+    config, blocked = await _prepare_digiflazz_operation(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS)
+    if blocked:
+        return blocked
+    assert config is not None
     username = config["username"]
     api_key = config["api_key"]
     base_url = config["base_url"]

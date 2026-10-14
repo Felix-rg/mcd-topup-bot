@@ -119,6 +119,31 @@ class AdminRoutesTests(unittest.TestCase):
         self.assertEqual(updated_product["price"], 12000)
         self.assertEqual(updated_product["promo_text"], "Promo metadata update")
 
+    def test_legacy_catalog_sync_is_feature_disabled_without_affecting_product_crud(self):
+        token, _ = self.login()
+
+        create_response = self.client.post(
+            "/admin/api/products",
+            headers={"token": token},
+            json={
+                "provider": "Manual Provider",
+                "name": "Manual Product",
+                "sku": "manual-product",
+                "cost": 8000,
+                "price": 10000,
+                "category": "Manual",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+
+        disabled = self.client.post("/admin/sync-products", headers={"token": token})
+        self.assertEqual(disabled.status_code, 410)
+        self.assertEqual(disabled.json()["detail"]["code"], "legacy_catalog_sync_disabled")
+
+        products = self.client.get("/admin/api/products", headers={"token": token})
+        self.assertEqual(products.status_code, 200)
+        self.assertEqual(products.json()["Manual"]["Manual Provider"][0]["sku"], "manual-product")
+
     def test_promo_crud_available_from_admin_dashboard(self):
         token, _ = self.login()
 
@@ -428,6 +453,20 @@ class AdminRoutesTests(unittest.TestCase):
         )
         self.assertEqual(rejected_secret_response.status_code, 400)
 
+        rejected_username_response = self.client.put(
+            "/admin/api/provider-settings",
+            headers={"token": owner_token},
+            json={"digiflazz_username": "not-allowed-in-database"},
+        )
+        self.assertEqual(rejected_username_response.status_code, 400)
+
+        rejected_legacy_sync_setting = self.client.put(
+            "/admin/api/provider-settings",
+            headers={"token": owner_token},
+            json={"digiflazz_product_auto_sync_enabled": 1},
+        )
+        self.assertEqual(rejected_legacy_sync_setting.status_code, 409)
+
         save_response = self.client.put(
             "/admin/api/provider-settings",
             headers={"token": owner_token},
@@ -438,7 +477,6 @@ class AdminRoutesTests(unittest.TestCase):
                 "topup_failover_enabled": 0,
                 "tripay_base_url": "https://tripay.example/api",
                 "digiflazz_base_url": "https://digiflazz.example/v1",
-                "digiflazz_username": "df-user",
             },
         )
         self.assertEqual(save_response.status_code, 200)
@@ -448,7 +486,7 @@ class AdminRoutesTests(unittest.TestCase):
         updated = updated_response.json()
         self.assertEqual(updated["providers"]["tripay"]["base_url"], "https://tripay.example/api")
         self.assertEqual(updated["providers"]["digiflazz"]["base_url"], "https://digiflazz.example/v1")
-        self.assertEqual(updated["providers"]["digiflazz"]["username"], "df-user")
+        self.assertNotIn("username", updated["providers"]["digiflazz"])
         self.assertNotIn("not-allowed-in-database", str(updated))
 
         create_response = self.client.post(

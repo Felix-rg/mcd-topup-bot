@@ -15,7 +15,11 @@ from app.promotions.service import (
     release_expired_reservations,
     release_order_promotions,
 )
-from app.services.catalog_sync_service import sync_digiflazz_products
+from app.services.digiflazz_capabilities import (
+    DIGIFLAZZ_CAPABILITY_BALANCE_WATCH,
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND,
+    DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS,
+)
 from app.services.digiflazz_service import (
     DIGIFLAZZ_OUTCOME_DEFINITIVE_FAILURE,
     DIGIFLAZZ_OUTCOME_PENDING,
@@ -26,6 +30,7 @@ from app.services.digiflazz_service import (
     cek_status_postpaid,
     classify_digiflazz_transaction_response,
     digiflazz_response_data,
+    digiflazz_operation_allowed,
     get_digiflazz_balance,
     kirim_digiflazz,
     pay_postpaid,
@@ -53,7 +58,6 @@ PROVIDER_RECONCILE_INTERVAL_SECONDS = 60
 
 _last_balance_check_at: Optional[datetime] = None
 _last_balance_alert_at: Optional[datetime] = None
-_last_product_sync_at: Optional[datetime] = None
 
 
 def _float_value(value: Any) -> float:
@@ -68,10 +72,6 @@ def _int_value(value: Any, default: int = 0) -> int:
         return int(float(value))
     except (TypeError, ValueError):
         return default
-
-
-def _truthy(value: Any) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _normalized_status(value: Any) -> str:
@@ -817,44 +817,22 @@ async def reconcile_open_payment_engine() -> None:
 
 
 async def product_catalog_sync_engine() -> None:
-    global _last_product_sync_at
+    """Legacy direct catalog sync is intentionally isolated in Phase 0.
 
-    try:
-        runtime_settings = await get_provider_runtime_settings()
-        if not _truthy(runtime_settings.get("digiflazz_product_auto_sync_enabled")):
-            return
+    Do not restore a runtime-settings/database override here.  The future
+    catalog implementation will have a separate Preview/Apply lifecycle and
+    durable lock; until then the embedded engine must make no catalog request
+    and write no catalog-sync status.
+    """
 
-        interval_minutes = max(
-            30,
-            _int_value(runtime_settings.get("digiflazz_product_sync_interval_minutes"), 360),
-        )
-        now = datetime.now(timezone.utc)
-        if _last_product_sync_at and now - _last_product_sync_at < timedelta(minutes=interval_minutes):
-            return
-        _last_product_sync_at = now
-
-        result = await sync_digiflazz_products()
-        await db_execute(
-            """
-            INSERT INTO site_settings (key, value, updated_by)
-            VALUES (:key, :value, 'engine')
-            ON CONFLICT(key) DO UPDATE SET
-                value = EXCLUDED.value,
-                updated_by = EXCLUDED.updated_by,
-                updated_at = CURRENT_TIMESTAMP
-            """,
-            {"key": "provider.digiflazz_last_product_sync", "value": _json_dumps(result)},
-        )
-        if result.get("errors"):
-            logging.warning("Auto-sync produk Digiflazz selesai dengan error: %s", "; ".join(result["errors"]))
-        else:
-            print(f"OK Auto-sync produk Digiflazz: {result.get('processed', 0)} produk diproses.")
-    except Exception as exc:
-        logging.error(f"Error auto-sync produk Digiflazz: {exc}")
+    return
 
 
 async def provider_balance_watch_engine() -> None:
     global _last_balance_check_at, _last_balance_alert_at
+
+    if not await digiflazz_operation_allowed(DIGIFLAZZ_CAPABILITY_BALANCE_WATCH):
+        return
 
     now = datetime.now(timezone.utc)
     if _last_balance_check_at and now - _last_balance_check_at < timedelta(seconds=DIGIFLAZZ_BALANCE_CHECK_INTERVAL_SECONDS):
@@ -919,6 +897,9 @@ async def provider_balance_watch_engine() -> None:
 
 
 async def _reconcile_unknown_provider_orders() -> None:
+    if not await digiflazz_operation_allowed(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS):
+        return
+
     rows = await db_query(
         """
         SELECT id, COALESCE(target_id, phone), nominal,
@@ -1045,20 +1026,29 @@ async def _reconcile_unknown_provider_orders() -> None:
 
 
 async def polling_status_engine() -> None:
-    await _reconcile_unknown_provider_orders()
-    try:
-        new_orders = await db_query(
-            """
-            SELECT id, COALESCE(target_id, phone), nominal, COALESCE(provider_retry_count, 0),
-                   COALESCE(order_type, 'PREPAID'), COALESCE(product_cost, price, 0)
-            FROM topup
-            WHERE topup_status='PROCESSING'
-              AND COALESCE(provider_outcome, 'NOT_SENT')='NOT_SENT'
-            """
-        )
-    except Exception as exc:
-        logging.error(f"ENGINE DB ERROR (new orders): {exc}")
-        return
+    status_operations_allowed = await digiflazz_operation_allowed(DIGIFLAZZ_CAPABILITY_TRANSACTION_STATUS)
+    if status_operations_allowed:
+        await _reconcile_unknown_provider_orders()
+
+    send_operations_allowed = await digiflazz_operation_allowed(DIGIFLAZZ_CAPABILITY_TRANSACTION_SEND)
+    if send_operations_allowed:
+        try:
+            new_orders = await db_query(
+                """
+                SELECT id, COALESCE(target_id, phone), nominal, COALESCE(provider_retry_count, 0),
+                       COALESCE(order_type, 'PREPAID'), COALESCE(product_cost, price, 0)
+                FROM topup
+                WHERE topup_status='PROCESSING'
+                  AND COALESCE(provider_outcome, 'NOT_SENT')='NOT_SENT'
+                """
+            )
+        except Exception as exc:
+            logging.error(f"ENGINE DB ERROR (new orders): {exc}")
+            return
+    else:
+        # Do not claim, create an attempt, or mark SENT_UNKNOWN when an
+        # outbound send is blocked before it can start.
+        new_orders = []
 
     runtime_settings = await get_provider_runtime_settings()
     testing_enabled = str(runtime_settings.get("digiflazz_testing_enabled") or "").lower() in {"1", "true", "yes", "on"}
@@ -1230,6 +1220,9 @@ async def polling_status_engine() -> None:
             else:
                 await _discard_stale_provider_attempt(order_id, attempt_number)
             logging.error("Unknown outcome kirim_digiflazz order=%s error_type=%s", order_id, error_type)
+
+    if not status_operations_allowed:
+        return
 
     try:
         pending_orders = await db_query("SELECT id, COALESCE(target_id, phone), nominal, COALESCE(order_type, 'PREPAID'), provider_last_check_at, created_at FROM topup WHERE topup_status='PENDING_PROVIDER'")

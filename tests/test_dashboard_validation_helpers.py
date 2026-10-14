@@ -624,7 +624,7 @@ class DashboardValidationHelperTests(unittest.TestCase):
         self.assertIn('id="edit_promo_simulation_identity_mode"', dashboard_html)
         self.assertIn('id="edit_promo_simulation_customer_id"', dashboard_html)
         self.assertIn('/web/css/admin.css?v=14', dashboard_html)
-        self.assertIn('/web/js/dashboard.js?v=promo-eligibility-20260720-1', dashboard_html)
+        self.assertIn('/web/js/dashboard.js?v=catalog-phase2-20261013-1', dashboard_html)
         self.assertIn('/web/js/topup.js?v=33', storefront_html)
 
     def test_promo_save_uses_json_and_dashboard_has_unique_ids(self):
@@ -659,7 +659,30 @@ class DashboardValidationHelperTests(unittest.TestCase):
         self.assertEqual(runtime_collisions, [], f"Runtime promo IDs collide with base HTML: {runtime_collisions}")
         self.assertIn('<option value="banner">Konten banner</option>', dashboard_js)
         self.assertIn('<option value="payment_method">Promo metode pembayaran</option>', dashboard_js)
-        self.assertIn('/web/js/dashboard.js?v=promo-eligibility-20260720-1', dashboard_html)
+        self.assertIn('/web/js/dashboard.js?v=catalog-phase2-20261013-1', dashboard_html)
+
+    def test_catalog_dashboard_uses_the_reviewed_preview_apply_surface(self):
+        root = Path(__file__).resolve().parents[1]
+        dashboard_js = (root / "web" / "js" / "dashboard.js").read_text(encoding="utf-8")
+        dashboard_html = (root / "web" / "admin-dashboard.html").read_text(encoding="utf-8")
+
+        self.assertEqual(dashboard_html.count("Catalog Provider"), 2)  # desktop and mobile navigation
+        self.assertIn('id="catalog_container"', dashboard_html)
+        self.assertIn('data-permission="catalog:preview"', dashboard_html)
+        self.assertIn('window.loadCatalog = async function()', dashboard_js)
+        self.assertIn('api("/admin/api/catalog/status")', dashboard_js)
+        self.assertIn('api("/admin/api/catalog/sync-runs?limit=30")', dashboard_js)
+        self.assertIn('/admin/api/catalog/digiflazz/prepaid/preview', dashboard_js)
+        self.assertIn('/admin/api/catalog/mapping-reviews/', dashboard_js)
+        self.assertIn('/admin/api/catalog/sync-runs/${encodeURIComponent(runId)}/apply', dashboard_js)
+        self.assertIn('Diff: ${changedFields.join(", ")}', dashboard_js)
+
+        catalog_section = dashboard_js[
+            dashboard_js.index("function catalogValue") : dashboard_js.index("function promoWizardExtraMarkup")
+        ]
+        self.assertNotIn("/admin/sync-products", catalog_section)
+        self.assertNotIn("/admin/api/provider/digiflazz", catalog_section)
+        self.assertNotIn("api_key", catalog_section)
 
 
 if __name__ == "__main__":

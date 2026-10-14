@@ -10,16 +10,37 @@ class EngineRetryTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self.temp_db.close()
+        self.previous_env = {
+            key: os.environ.get(key)
+            for key in (
+                "APP_ENV",
+                "DATABASE_URL",
+                "DIGIFLAZZ_USERNAME",
+                "DIGIFLAZZ_API_KEY",
+                "DIGIFLAZZ_TRANSACTION_SEND_ENABLED",
+                "DIGIFLAZZ_TRANSACTION_STATUS_ENABLED",
+            )
+        }
+        os.environ["APP_ENV"] = "test"
         os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{self.temp_db.name}"
+        os.environ["DIGIFLAZZ_USERNAME"] = "test-digiflazz-user"
+        os.environ["DIGIFLAZZ_API_KEY"] = "test-digiflazz-key"
+        os.environ["DIGIFLAZZ_TRANSACTION_SEND_ENABLED"] = "true"
+        os.environ["DIGIFLAZZ_TRANSACTION_STATUS_ENABLED"] = "true"
 
         import importlib
 
+        from app.core import settings as core_settings
         import core.database as core_database
         import database as legacy_database
         import app.engine as engine_module
+        from app.services import digiflazz_service, provider_settings
 
+        self.core_settings = importlib.reload(core_settings)
         self.core_database = importlib.reload(core_database)
         self.legacy_database = importlib.reload(legacy_database)
+        self.provider_settings = importlib.reload(provider_settings)
+        self.digiflazz_service = importlib.reload(digiflazz_service)
         self.engine_module = importlib.reload(engine_module)
 
         await self.legacy_database.init_db()
@@ -64,6 +85,11 @@ class EngineRetryTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def asyncTearDown(self) -> None:
+        for key, value in self.previous_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         if os.path.exists(self.temp_db.name):
             os.remove(self.temp_db.name)
 

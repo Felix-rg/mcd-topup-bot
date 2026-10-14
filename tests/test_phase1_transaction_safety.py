@@ -26,6 +26,8 @@ class Phase1TransactionSafetyTests(unittest.TestCase):
             "DIGIFLAZZ_USERNAME": os.environ.get("DIGIFLAZZ_USERNAME"),
             "DIGIFLAZZ_API_KEY": os.environ.get("DIGIFLAZZ_API_KEY"),
             "DIGIFLAZZ_WEBHOOK_SECRET": os.environ.get("DIGIFLAZZ_WEBHOOK_SECRET"),
+            "DIGIFLAZZ_TRANSACTION_SEND_ENABLED": os.environ.get("DIGIFLAZZ_TRANSACTION_SEND_ENABLED"),
+            "DIGIFLAZZ_TRANSACTION_STATUS_ENABLED": os.environ.get("DIGIFLAZZ_TRANSACTION_STATUS_ENABLED"),
         }
         os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{self.temp_db.name}"
         os.environ["DEFAULT_ADMIN_USERNAME"] = "admin"
@@ -36,6 +38,8 @@ class Phase1TransactionSafetyTests(unittest.TestCase):
         os.environ["DIGIFLAZZ_USERNAME"] = "digiflazz-user"
         os.environ["DIGIFLAZZ_API_KEY"] = "digiflazz-key"
         os.environ["DIGIFLAZZ_WEBHOOK_SECRET"] = "digiflazz-webhook-secret"
+        os.environ["DIGIFLAZZ_TRANSACTION_SEND_ENABLED"] = "true"
+        os.environ["DIGIFLAZZ_TRANSACTION_STATUS_ENABLED"] = "true"
 
         from app.core import database as core_database
         from app.core import settings as core_settings

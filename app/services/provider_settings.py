@@ -1,7 +1,8 @@
 from typing import Any, Dict
 
 from app import database as app_database
-from app.core.settings import settings
+from app.core import settings as settings_module
+from app.services.digiflazz_capabilities import digiflazz_capability_snapshot
 
 
 PROVIDER_SETTING_PREFIX = "provider."
@@ -10,9 +11,17 @@ SECRET_PROVIDER_KEYS = {
     "tripay_api_key",
     "tripay_private_key",
     "tripay_merchant_code",
+    # A Buyer username is an account credential/identifier.  It belongs to
+    # the same trusted environment-only boundary as the associated API key.
+    "digiflazz_username",
     "digiflazz_api_key",
     "digiflazz_webhook_secret",
 }
+
+# Legacy catalog auto-sync is intentionally locked off.  It remains in the
+# response shape for compatibility, but neither a database override nor an
+# admin setting update may turn it back on before Preview/Apply exists.
+LOCKED_PROVIDER_RUNTIME_KEYS = {"digiflazz_product_auto_sync_enabled"}
 
 PROVIDER_DEFAULTS = {
     "active_payment_provider": "tripay",
@@ -24,16 +33,16 @@ PROVIDER_DEFAULTS = {
     "digiflazz_max_price_margin_percent": "10",
     "digiflazz_low_balance_threshold": "50000",
     "tripay_wallet_sync_interval_seconds": "120",
-    "digiflazz_product_auto_sync_enabled": "1",
+    "digiflazz_product_auto_sync_enabled": "0",
     "digiflazz_product_sync_interval_minutes": "360",
-    "tripay_base_url": settings.resolved_tripay_base_url,
-    "tripay_api_key": settings.tripay_api_key,
-    "tripay_private_key": settings.tripay_private_key,
-    "tripay_merchant_code": settings.tripay_merchant_code,
-    "digiflazz_base_url": settings.digiflazz_base_url,
-    "digiflazz_username": settings.digiflazz_username,
-    "digiflazz_api_key": settings.digiflazz_api_key,
-    "digiflazz_webhook_secret": settings.digiflazz_webhook_secret,
+    "tripay_base_url": settings_module.settings.resolved_tripay_base_url,
+    "tripay_api_key": settings_module.settings.tripay_api_key,
+    "tripay_private_key": settings_module.settings.tripay_private_key,
+    "tripay_merchant_code": settings_module.settings.tripay_merchant_code,
+    "digiflazz_base_url": settings_module.settings.digiflazz_base_url,
+    "digiflazz_username": settings_module.settings.digiflazz_username,
+    "digiflazz_api_key": settings_module.settings.digiflazz_api_key,
+    "digiflazz_webhook_secret": settings_module.settings.digiflazz_webhook_secret,
 }
 
 
@@ -76,10 +85,11 @@ async def get_provider_runtime_settings() -> Dict[str, str]:
     overrides = await get_provider_overrides()
     runtime: Dict[str, str] = {}
     for key, default in PROVIDER_DEFAULTS.items():
-        if key in SECRET_PROVIDER_KEYS:
+        if key in SECRET_PROVIDER_KEYS | LOCKED_PROVIDER_RUNTIME_KEYS:
             # Sensitive provider credentials are intentionally environment-only.
-            # Existing database values are ignored rather than becoming a runtime
-            # source of truth.
+            # The legacy catalog switch is locked off for Phase 0.  Existing
+            # database values are ignored rather than becoming a runtime source
+            # of truth.
             runtime[key] = _clean(default)
             continue
         override = overrides.get(key)
@@ -95,9 +105,10 @@ async def update_provider_runtime_settings(updates: Dict[str, Any], updated_by: 
         if key not in updates:
             continue
 
-        if key in SECRET_PROVIDER_KEYS:
+        if key in SECRET_PROVIDER_KEYS | LOCKED_PROVIDER_RUNTIME_KEYS:
             # Keep direct service callers from persisting credentials even if an
-            # API validation layer is bypassed.
+            # API validation layer is bypassed.  The legacy catalog switch is
+            # intentionally immutable until its replacement is available.
             continue
 
         raw_value = updates.get(key)
@@ -124,7 +135,7 @@ async def get_tripay_config() -> Dict[str, str]:
         "api_key": runtime["tripay_api_key"],
         "private_key": runtime["tripay_private_key"],
         "merchant_code": runtime["tripay_merchant_code"],
-        "base_url": runtime["tripay_base_url"] or settings.resolved_tripay_base_url,
+        "base_url": runtime["tripay_base_url"] or settings_module.settings.resolved_tripay_base_url,
     }
 
 
@@ -134,7 +145,25 @@ async def get_digiflazz_config() -> Dict[str, str]:
         "username": runtime["digiflazz_username"],
         "api_key": runtime["digiflazz_api_key"],
         "webhook_secret": runtime["digiflazz_webhook_secret"],
-        "base_url": runtime["digiflazz_base_url"] or settings.digiflazz_base_url,
+        "base_url": runtime["digiflazz_base_url"] or settings_module.settings.digiflazz_base_url,
+    }
+
+
+async def get_digiflazz_catalog_config() -> Dict[str, str]:
+    """Return the catalog-only outbound configuration from environment.
+
+    A price-list request contains a credential-derived signature.  Unlike the
+    legacy transaction configuration, this new Phase 2 surface deliberately
+    does not honor mutable database runtime overrides for its destination;
+    an owner must set the HTTPS catalog endpoint in trusted process
+    configuration.
+    """
+
+    configured = settings_module.settings
+    return {
+        "username": _clean(configured.digiflazz_username),
+        "api_key": _clean(configured.digiflazz_api_key),
+        "base_url": _clean(configured.digiflazz_base_url),
     }
 
 
@@ -173,15 +202,16 @@ def build_provider_admin_payload(runtime: Dict[str, str]) -> Dict[str, Any]:
                 "interval_seconds": int(runtime.get("tripay_wallet_sync_interval_seconds") or 120),
             },
             "digiflazz_product_sync": {
-                "enabled": _truthy(runtime.get("digiflazz_product_auto_sync_enabled")),
+                "enabled": False,
                 "interval_minutes": int(runtime.get("digiflazz_product_sync_interval_minutes") or 360),
             },
         },
+        "digiflazz_capabilities": digiflazz_capability_snapshot(),
         "providers": {
             "tripay": {
                 "name": "Tripay",
                 "configured": tripay_configured,
-                "base_url": runtime.get("tripay_base_url") or settings.resolved_tripay_base_url,
+                "base_url": runtime.get("tripay_base_url") or settings_module.settings.resolved_tripay_base_url,
                 "credentials": [
                     {
                         "key": "tripay_api_key",
@@ -206,9 +236,14 @@ def build_provider_admin_payload(runtime: Dict[str, str]) -> Dict[str, Any]:
             "digiflazz": {
                 "name": "Digiflazz",
                 "configured": digiflazz_configured,
-                "base_url": runtime.get("digiflazz_base_url") or settings.digiflazz_base_url,
-                "username": runtime.get("digiflazz_username") or "",
+                "base_url": runtime.get("digiflazz_base_url") or settings_module.settings.digiflazz_base_url,
                 "credentials": [
+                    {
+                        "key": "digiflazz_username",
+                        "label": "Username",
+                        "configured": bool(runtime.get("digiflazz_username")),
+                        "masked": mask_secret(runtime.get("digiflazz_username")),
+                    },
                     {
                         "key": "digiflazz_api_key",
                         "label": "API Key",

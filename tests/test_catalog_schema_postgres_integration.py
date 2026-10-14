@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -18,6 +19,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
@@ -1225,3 +1227,161 @@ def test_postgresql_verify_detects_post_migration_schema_integrity_failure(
         ),
         "migration_verification_failed",
     )
+
+
+def test_postgresql_phase2_preview_review_apply_uses_fenced_lifecycle(
+    disposable_databases: _DatabaseFactory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise Phase 2 service SQL on asyncpg without any provider HTTP.
+
+    The disposable database is created by the same explicitly opted-in test
+    factory as the Phase 1 lane.  A fake client supplies one allow-listed
+    catalog row, so no outbound provider configuration or request is involved.
+    """
+
+    source = disposable_databases.create("phase2_lifecycle")
+    restore = disposable_databases.create("phase2_lifecycle_restore")
+    asyncio.run(_create_legacy_baseline(source.url, rich=True))
+    preflight = _require_preflight_report(_run_runner(source.url, "preflight"))
+    manifest_path = _create_verified_backup_manifest(source, restore, preflight, tmp_path, rich=True)
+    _require_success(
+        _run_runner(
+            source.url,
+            "upgrade",
+            "--target-fingerprint",
+            str(preflight["target"]["fingerprint"]),
+            "--postgres-backup-manifest",
+            str(manifest_path),
+        )
+    )
+
+    # These imports/reloads are deliberately local to the test so importing
+    # this module cannot start an application or inspect an app database.
+    from app import database as legacy_database
+    from app.core import database as core_database
+    from app.core import settings as core_settings
+    from app.services import catalog_sync_service
+    from app.services.digiflazz_catalog_client import DigiflazzCatalogResponse
+
+    async def scenario(service: Any, database_module: Any, core_database_module: Any) -> None:
+        class FakeCatalogClient:
+            calls = 0
+
+            async def fetch_prepaid_price_list(self) -> DigiflazzCatalogResponse:
+                self.calls += 1
+                return DigiflazzCatalogResponse(
+                    rows=(
+                        {
+                            "buyer_sku_code": "PG-PULSA-10",
+                            "product_name": "Pulsa 10 ribu",
+                            "category": "Pulsa",
+                            "brand": "Telkomsel",
+                            "type": "Prepaid",
+                            "seller_name": "Digiflazz",
+                            "price": 9000,
+                            "buyer_product_status": True,
+                            "seller_product_status": True,
+                            "stock": 10,
+                        },
+                    )
+                )
+
+        client = FakeCatalogClient()
+        preview = await service.preview_catalog_sync(client=client, actor="postgres-test", cooldown_seconds=1)
+        assert client.calls == 1
+        preview_id = str(preview["run"]["run_id"])
+        detail = await service.get_catalog_sync_run_detail(preview_id)
+        assert detail["can_apply"] is False
+        review_id = str(detail["items"][0]["review"]["review_id"])
+        catalog_product_id = str(
+            (await database_module.db_query("SELECT catalog_product_id FROM products WHERE sku='ml_10k'"))[0][0]
+        )
+
+        # A second PostgreSQL session holds the same parent preview row.  The
+        # review task must wait, proving that a late review cannot write past
+        # Apply's corresponding FOR UPDATE fence.
+        engine = core_database_module.get_engine()
+        async with engine.connect() as lock_connection:
+            transaction = await lock_connection.begin()
+            try:
+                await lock_connection.execute(
+                    text("SELECT run_id FROM catalog_sync_runs WHERE run_id=:run_id FOR UPDATE"),
+                    {"run_id": preview_id},
+                )
+                decision_task = asyncio.create_task(
+                    service.decide_catalog_mapping(
+                        review_id=review_id,
+                        decision="attach_existing",
+                        actor="postgres-reviewer",
+                        catalog_product_id=catalog_product_id,
+                    )
+                )
+                await asyncio.sleep(0.1)
+                assert not decision_task.done()
+            finally:
+                await transaction.commit()
+            decision = await asyncio.wait_for(decision_task, timeout=5)
+        assert decision["review"]["status"] == "APPROVED"
+
+        applied = await service.apply_catalog_snapshot(preview_run_id=preview_id, actor="postgres-owner")
+        assert applied["already_applied"] is False
+        repeated = await service.apply_catalog_snapshot(preview_run_id=preview_id, actor="postgres-owner")
+        assert repeated["already_applied"] is True
+        candidates = await database_module.db_query(
+            "SELECT provider_sku, mapping_state, catalog_product_id, cost_price FROM provider_products"
+        )
+        assert candidates == [("PG-PULSA-10", "APPROVED", catalog_product_id, Decimal("9000"))]
+
+        # A later complete empty snapshot makes the prior candidate stale; it
+        # does not delete it or modify the mapped logical product/storefront.
+        # The application persists this PostgreSQL ``TIMESTAMP`` column as a
+        # UTC-naive value (see ``_database_timestamp``).  ``CURRENT_TIMESTAMP``
+        # is ``TIMESTAMPTZ`` and its implicit cast would use the server session
+        # time zone, which can make an intended past cooldown appear future when
+        # the service correctly reads naive values as UTC.
+        await database_module.db_execute(
+            """
+            UPDATE catalog_provider_sync_state
+            SET next_full_fetch_not_before=(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 second'
+            WHERE provider_code='digiflazz' AND catalog_scope='prepaid'
+            """
+        )
+
+        class EmptyCatalogClient:
+            async def fetch_prepaid_price_list(self) -> DigiflazzCatalogResponse:
+                return DigiflazzCatalogResponse(rows=())
+
+        empty_preview = await service.preview_catalog_sync(
+            client=EmptyCatalogClient(), actor="postgres-test", cooldown_seconds=1
+        )
+        await service.apply_catalog_snapshot(
+            preview_run_id=str(empty_preview["run"]["run_id"]), actor="postgres-owner"
+        )
+        stale = await database_module.db_query(
+            "SELECT provider_sku, availability_state FROM provider_products"
+        )
+        assert stale == [("PG-PULSA-10", "STALE")]
+
+    with monkeypatch.context() as environment:
+        # The URL is rendered only into this process's temporary environment;
+        # the test never logs it or passes it to a subprocess.
+        environment.setenv("DATABASE_URL", source.url.render_as_string(hide_password=False))
+        environment.setenv("APP_ENV", "staging")
+        importlib.reload(core_settings)
+        importlib.reload(core_database)
+        importlib.reload(legacy_database)
+        service = importlib.reload(catalog_sync_service)
+        try:
+            asyncio.run(scenario(service, legacy_database, core_database))
+        finally:
+            if core_database.engine is not None:
+                asyncio.run(core_database.engine.dispose())
+
+    # Restore process-global settings modules after the temporary disposable
+    # connection is gone so the rest of the regression suite remains hermetic.
+    importlib.reload(core_settings)
+    importlib.reload(core_database)
+    importlib.reload(legacy_database)
+    importlib.reload(catalog_sync_service)
