@@ -1354,10 +1354,14 @@ function catalogValue(value, fallback = "-") {
 
 function catalogStatusBadge(status) {
     const value = String(status || "UNKNOWN").toUpperCase();
-    const style = value === "APPLIED" || value === "PREVIEW_READY" || value === "AVAILABLE"
-        ? "bg-success"
-        : (value === "FAILED" || value === "REJECTED" || value === "UNAVAILABLE" ? "bg-danger" : "bg-secondary");
-    return `<span class="badge ${style}">${catalogValue(value)}</span>`;
+    const tone = ["APPLIED", "PREVIEW_READY", "APPROVED", "AVAILABLE"].includes(value)
+        ? "success"
+        : (["FAILED", "REJECTED", "UNAVAILABLE"].includes(value)
+            ? "error"
+            : (["RUNNING", "APPLYING", "PENDING", "MAPPING_REQUIRED"].includes(value)
+                ? "warning"
+                : (["NEW", "CHANGED"].includes(value) ? "info" : "neutral")));
+    return `<span class="catalog-status catalog-status--${tone}">${catalogValue(value)}</span>`;
 }
 
 function renderCatalogWorkspace() {
@@ -1373,32 +1377,34 @@ function renderCatalogWorkspace() {
         ["Apply berhasil", status.last_successful_run_id || "Belum ada", status.last_success_at || "-"],
         ["Preview berikutnya", status.next_allowed_at || "Sekarang", status.last_failure_code || "Aman"]
     ].map(([label, value, detail]) => `
-        <div class="col-md-4 mb-3"><div class="card border-0 shadow-sm h-100"><div class="card-body">
-            <div class="small text-muted">${catalogValue(label)}</div>
-            <div class="fw-semibold text-break">${catalogValue(value)}</div>
-            <div class="small text-muted text-break">${catalogValue(detail)}</div>
-        </div></div></div>`).join("");
+        <div class="col-md-4 mb-3"><section class="catalog-status-card h-100">
+            <div class="catalog-meta">${catalogValue(label)}</div>
+            <div class="catalog-status-value text-break">${catalogValue(value)}</div>
+            <div class="catalog-meta text-break">${catalogValue(detail)}</div>
+        </section></div>`).join("");
     const runRows = runs.map((run) => `
         <tr>
-            <td><code>${catalogValue(run.run_id)}</code><div class="small text-muted">${catalogValue(run.operation)}</div></td>
+            <td><code class="catalog-run-id">${catalogValue(run.run_id)}</code><div class="catalog-meta">${catalogValue(run.operation)}</div></td>
             <td>${catalogStatusBadge(run.status)}</td>
             <td>${catalogValue(run.received_count, "0")} / ${catalogValue(run.valid_count, "0")}</td>
             <td>${catalogValue(run.review_required_count, "0")}</td>
-            <td class="small">${catalogValue(run.finished_at || run.started_at)}</td>
-            <td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="openCatalogRun('${escapeJs(run.run_id)}')">Detail</button></td>
-        </tr>`).join("") || `<tr><td colspan="6" class="text-center text-muted py-4">Belum ada preview katalog.</td></tr>`;
+            <td class="catalog-meta">${catalogValue(run.finished_at || run.started_at)}</td>
+            <td class="catalog-action-cell"><button type="button" class="btn btn-sm catalog-action catalog-action--secondary" onclick="openCatalogRun('${escapeJs(run.run_id)}')">Detail</button></td>
+        </tr>`).join("") || `<tr><td colspan="6" class="catalog-empty">Belum ada preview katalog.</td></tr>`;
     const active = catalogState.activeRun;
     container.innerHTML = `
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div><p class="text-muted mb-0">Preview hanya menyimpan kandidat provider. Apply tidak mengaktifkan produk, mengubah harga jual, atau memilih supplier checkout.</p></div>
-            <button class="btn btn-primary" ${previewAllowed ? "" : "disabled"} onclick="previewDigiflazzCatalog()"><i class="bi bi-eye me-1"></i> Preview Digiflazz</button>
-        </div>
-        <div class="row">${statusCards}</div>
-        ${status.safe_failure_summary ? `<div class="alert alert-warning small">Status provider terakhir: ${catalogValue(status.safe_failure_summary)}</div>` : ""}
-        <div class="card border-0 shadow-sm mb-3"><div class="card-header bg-white d-flex justify-content-between align-items-center"><strong>Snapshot Catalog</strong><button class="btn btn-sm btn-outline-secondary" onclick="loadCatalog()">Refresh</button></div>
-            <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Run</th><th>Status</th><th>Data</th><th>Review</th><th>Waktu</th><th></th></tr></thead><tbody>${runRows}</tbody></table></div>
-        </div>
-        ${active ? renderCatalogRunDetail(active, applyAllowed) : ""}`;
+        <section class="catalog-workspace" aria-label="Catalog Provider">
+            <div class="catalog-toolbar">
+                <div class="catalog-intro"><p class="mb-0">Preview hanya menyimpan kandidat provider. Apply tidak mengaktifkan produk, mengubah harga jual, atau memilih supplier checkout.</p></div>
+                <button type="button" class="btn catalog-action catalog-action--primary" ${previewAllowed ? "" : "disabled"} onclick="previewDigiflazzCatalog()"><i class="bi bi-eye me-1"></i> Preview Digiflazz</button>
+            </div>
+            <div class="row">${statusCards}</div>
+            ${status.safe_failure_summary ? `<div class="catalog-alert catalog-alert--warning">Status provider terakhir: ${catalogValue(status.safe_failure_summary)}</div>` : ""}
+            <section class="catalog-card mb-3"><div class="catalog-section-header"><strong>Snapshot Catalog</strong><button type="button" class="btn btn-sm catalog-action catalog-action--secondary" onclick="loadCatalog()">Refresh</button></div>
+                <div class="table-responsive"><table class="table table-hover align-middle mb-0 catalog-table"><thead><tr><th>Run</th><th>Status</th><th>Data</th><th>Review</th><th>Waktu</th><th></th></tr></thead><tbody>${runRows}</tbody></table></div>
+            </section>
+            ${active ? renderCatalogRunDetail(active, applyAllowed) : ""}
+        </section>`;
 }
 
 function renderCatalogRunDetail(detail, applyAllowed) {
@@ -1409,32 +1415,32 @@ function renderCatalogRunDetail(detail, applyAllowed) {
             ? item.diff.changed_fields.map((field) => catalogValue(field, "")).filter(Boolean)
             : [];
         const diffSummary = changedFields.length
-            ? `<div class="small text-muted">Diff: ${changedFields.join(", ")}</div>`
+            ? `<div class="catalog-meta">Diff: ${changedFields.join(", ")}</div>`
             : "";
         const reviewControls = item.requires_review && review.review_id && hasPermission("catalog:review")
             ? `<div class="btn-group btn-group-sm mt-1" role="group">
-                    <button class="btn btn-outline-primary" onclick="attachCatalogCandidate('${escapeJs(review.review_id)}')">Attach</button>
-                    <button class="btn btn-outline-secondary" onclick="createCatalogLogicalProduct('${escapeJs(review.review_id)}')">Buat Draft</button>
-                    <button class="btn btn-outline-danger" onclick="rejectCatalogCandidate('${escapeJs(review.review_id)}')">Tolak</button>
+                    <button type="button" class="btn catalog-action catalog-action--primary" onclick="attachCatalogCandidate('${escapeJs(review.review_id)}')">Attach</button>
+                    <button type="button" class="btn catalog-action catalog-action--secondary" onclick="createCatalogLogicalProduct('${escapeJs(review.review_id)}')">Buat Draft</button>
+                    <button type="button" class="btn catalog-action catalog-action--danger" onclick="rejectCatalogCandidate('${escapeJs(review.review_id)}')">Tolak</button>
                 </div>`
             : "";
         return `<tr>
-            <td><code>${catalogValue(item.provider_sku)}</code><div class="small text-muted">${catalogValue(item.product_name)}</div></td>
-            <td>${catalogValue(item.brand)}<div class="small text-muted">${catalogValue(item.category)} / ${catalogValue(item.type)}</div></td>
-            <td>${catalogValue(item.cost_price)}<div class="small">${catalogStatusBadge(item.availability_state)}</div></td>
-            <td>${catalogStatusBadge(item.proposed_action)}<div class="small text-muted">${catalogValue((item.reason_codes || []).join(", "), "")}</div>${diffSummary}</td>
-            <td><code>${catalogValue((review.selected_catalog_product_id || item.catalog_product_id), "-")}</code><div>${review.status ? catalogStatusBadge(review.status) : ""}</div>${reviewControls}</td>
+            <td><code class="catalog-id">${catalogValue(item.provider_sku)}</code><div class="catalog-meta">${catalogValue(item.product_name)}</div></td>
+            <td>${catalogValue(item.brand)}<div class="catalog-meta">${catalogValue(item.category)} / ${catalogValue(item.type)}</div></td>
+            <td>${catalogValue(item.cost_price)}<div class="mt-1">${catalogStatusBadge(item.availability_state)}</div></td>
+            <td>${catalogStatusBadge(item.proposed_action)}<div class="catalog-meta">${catalogValue((item.reason_codes || []).join(", "), "")}</div>${diffSummary}</td>
+            <td><code class="catalog-id">${catalogValue((review.selected_catalog_product_id || item.catalog_product_id), "-")}</code><div class="mt-1">${review.status ? catalogStatusBadge(review.status) : ""}</div>${reviewControls}</td>
         </tr>`;
-    }).join("") || `<tr><td colspan="5" class="text-center text-muted py-3">Snapshot tidak memiliki item.</td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="catalog-empty">Snapshot tidak memiliki item.</td></tr>`;
     const canApply = Boolean(detail.can_apply && applyAllowed);
     const blockers = (detail.blocked_reasons || []).map(catalogValue).join(", ");
-    return `<div class="card border-0 shadow-sm mt-3"><div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div><strong>Detail Snapshot</strong> <code class="text-warning">${catalogValue(run.run_id)}</code></div>
-            <div><button class="btn btn-sm ${canApply ? "btn-success" : "btn-outline-light"}" ${canApply ? "" : "disabled"} onclick="applyCatalogRun('${escapeJs(run.run_id)}')">Apply reviewed snapshot</button></div>
+    return `<section class="catalog-card catalog-card--detail mt-3"><div class="catalog-section-header catalog-section-header--detail">
+            <div><strong>Detail Snapshot</strong> <code class="catalog-run-id">${catalogValue(run.run_id)}</code></div>
+            <div><button type="button" class="btn btn-sm catalog-action ${canApply ? "catalog-action--primary" : "catalog-action--disabled"}" ${canApply ? "" : "disabled"} onclick="applyCatalogRun('${escapeJs(run.run_id)}')">Apply reviewed snapshot</button></div>
         </div>
-        <div class="card-body pb-0"><div class="small text-muted mb-3">Hash: <code>${catalogValue(run.snapshot_hash)}</code>${blockers ? ` — Apply diblokir: ${blockers}` : ""}</div></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Candidate</th><th>Semantik</th><th>Cost / Status</th><th>Aksi Preview</th><th>Mapping</th></tr></thead><tbody>${itemRows}</tbody></table></div>
-    </div>`;
+        <div class="catalog-detail-meta">Hash: <code class="catalog-hash">${catalogValue(run.snapshot_hash)}</code>${blockers ? ` <span class="catalog-blocker">— Apply diblokir: ${blockers}</span>` : ""}</div>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 catalog-table"><thead><tr><th>Candidate</th><th>Semantik</th><th>Cost / Status</th><th>Aksi Preview</th><th>Mapping</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+    </section>`;
 }
 
 window.loadCatalog = async function() {
@@ -1446,7 +1452,7 @@ window.loadCatalog = async function() {
     if (search) search.style.display = "none";
     const container = byId("catalog_container");
     container.style.display = "block";
-    container.innerHTML = `<div class="dashboard-panel p-4 text-center"><div class="spinner-border text-warning"></div><div class="mt-2">Memuat status catalog...</div></div>`;
+    container.innerHTML = `<section class="catalog-workspace catalog-loading-panel p-4 text-center" aria-label="Catalog Provider"><div class="spinner-border catalog-spinner" role="status"><span class="visually-hidden">Memuat</span></div><div class="mt-2">Memuat status catalog...</div></section>`;
     try {
         const [status, runs] = await Promise.all([
             api("/admin/api/catalog/status"),
@@ -1457,7 +1463,7 @@ window.loadCatalog = async function() {
         catalogState.activeRun = null;
         renderCatalogWorkspace();
     } catch (error) {
-        container.innerHTML = `<div class="alert alert-danger">Gagal memuat catalog provider.</div>`;
+        container.innerHTML = `<section class="catalog-workspace"><div class="catalog-alert catalog-alert--error">Gagal memuat catalog provider.</div></section>`;
         showError(error, "Gagal memuat catalog provider.");
     }
 };
